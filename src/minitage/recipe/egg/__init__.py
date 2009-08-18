@@ -51,10 +51,10 @@ import setuptools.archive_util
 from setuptools.command import easy_install
 import zc.buildout.easy_install
 
-from minitage.recipe import common
+from minitage.recipe.common import common
 from minitage.core.fetchers.interfaces import IFetcherFactory
 from minitage.core import core
-from minitage.core.common import splitstrip
+from minitage.core.common.common import splitstrip
 
 PATCH_MARKER = 'ZMinitagePatched'
 orig_versions_re = re.compile('-*%s.*' % PATCH_MARKER, re.U|re.S)
@@ -75,8 +75,24 @@ def get_requirement_version(requirement):
                 version = spec[1]
     return version, patched_egg
 
+first_digit_re =  re.compile('^(\d).*', re.M|re.S|re.U)
 def get_first_dist(where):
-    return [a for a in setuptools.package_index.distros_for_filename(where)][0]
+    dists = [a
+             for a in setuptools.package_index.distros_for_filename(
+                 where
+             )
+           ]
+    if len (dists) > 1:
+        sorted_dists = dists[:]
+        sorted_dists = [d for d in sorted_dists if d.version]
+        if len(sorted_dists) > 1:
+            sorted_dists = [e
+                            for e in sorted_dists
+                            if first_digit_re.match(e.version)
+                           ]
+            if len(sorted_dists) == 1:
+                dists = sorted_dists
+    return dists[0]
 
 def merge_extras(a, b):
     a.extras += b.extras
