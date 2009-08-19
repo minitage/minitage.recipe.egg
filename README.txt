@@ -9,9 +9,14 @@ Introduction
 =======================
 
 The egg has those entry point:
+
     - *egg*: install python eggs / packages 'setuptoolisables'
 
+
+
+
 The reasons why i have rewrite yet another buildout recipes builder are:
+
     - Support for downloading stuff
     - Do not rely on easy_install dependency system
     - Support on the fly patchs for eggs and other distribution.
@@ -23,10 +28,14 @@ The reasons why i have rewrite yet another buildout recipes builder are:
       In other terms, we provide an url, and the recipe builds it, that's all.
     - Support automaticly minitage dependencies and rpath linking.
 
+
+
 You can browse the code on minitage's following resources:
 
     - http://git.minitage.org/git/minitage/eggs/minitage.recipe.egg/
     - http://www.minitage.org/trac/browser/minitage/eggs/minitage.recipe.egg
+
+
 
 You can migrate your buldouts without any effort with buildout.minitagificator:
 
