@@ -54,7 +54,7 @@ import zc.buildout.easy_install
 from minitage.recipe.common import common
 from minitage.core.fetchers.interfaces import IFetcherFactory
 from minitage.core import core
-from minitage.core.common.common import splitstrip
+from minitage.core.common import splitstrip
 
 PATCH_MARKER = 'ZMinitagePatched'
 orig_versions_re = re.compile('-*%s.*' % PATCH_MARKER, re.U|re.S)
@@ -269,7 +269,11 @@ class Recipe(common.MinitageCommonRecipe):
     def install(self):
         """installs an egg
         """
-        reqs, working_set = self.working_set()
+        try:
+            reqs, working_set = self.working_set()
+        except Exception, e:
+            self.logger.error('Installation error.')
+            self.logger.error('Message was:\n\t%s' % e)
         return []
 
     def working_set(self, extras=None, working_set=None, dest=None):
@@ -296,34 +300,25 @@ class Recipe(common.MinitageCommonRecipe):
         if not os.path.exists(self.tmp_directory):
             os.makedirs(self.tmp_directory)
         # get the source distribution url for the eggs
-        try:
-            # if we have urls
-            # downloading each, scanning its stuff and giving it to easy install
-            requirements, working_set = self.install_static_distributions(working_set,
-                                                                          requirements=requirements,
-                                                                          dest=dest)
-            # install static distributions dependencies as well
-            if requirements:
-                extras.extend(requirements)
-            # installing classical requirements
-            if self.eggs or extras:
-                drequirements, working_set = self._install_requirements(
-                    self.eggs + extras,
-                    dest,
-                    working_set=working_set)
-                requirements.extend(drequirements)
-        except Exception, e:
-            raise
-            self.logger.error('Compilation error. The package is'
-                              ' left as is at %s where '
-                              'you can inspect what went wrong' % (
-                                  self.tmp_directory))
-            self.logger.error('Message was:\n\t%s' % e)
-            raise core.MinimergeError('Recipe failed, cant install.')
-
+        # if we have urls
+        # downloading each, scanning its stuff and giving it to easy install
+        requirements, working_set = self.install_static_distributions(working_set,
+                                                                      requirements=requirements,
+                                                                      dest=dest)
+        # install static distributions dependencies as well
+        if requirements:
+            extras.extend(requirements)
+        # installing classical requirements
+        if self.eggs or extras:
+            drequirements, working_set = self._install_requirements(
+                self.eggs + extras,
+                dest,
+                working_set=working_set)
+            requirements.extend(drequirements)
         # cleaning stuff
         if os.path.isdir(self.tmp_directory):
             shutil.rmtree(self.tmp_directory)
+
         if not dest in self.eggs_caches:
             self.eggs_caches.append(dest)
 
@@ -922,6 +917,8 @@ class Recipe(common.MinitageCommonRecipe):
                             working_set,
                             already_installed_dependencies
                         )
+                    except SystemError, e:
+                        raise
                     except Exception, e:
                         # try to install the same distribution on other links,
                         # eg when the download_url returns 404 or error

@@ -1,6 +1,6 @@
 
 ===============================================
-minitage.recipe:egg
+minitage.recipe.egg
 ===============================================
 
 
@@ -25,77 +25,79 @@ Abstract
 Specific options
 -----------------
 
-    * urls
+Please look for options at : http://pypi.python.org/pypi/minitage.recipe.common#options-shared-by-all-the-recipes
 
-        See the shared options for more information on how to set them.
-        This is how to specify a distrbituion with is not indexed on pypi and where find-links dance can not work.
-        This is also how to specify to install something from svn::
+* urls
 
-            urls = http://foo.tld/my_super_egg|svn|666 # checkout and install this egg from svn at revision 666
-    * eggs
+    See the shared options for more information on how to set them.
+    This is how to specify a distrbituion with is not indexed on pypi and where find-links dance can not work.
+    This is also how to specify to install something from svn::
 
-        A list of egg requirements to install without the version specs bit.::
+        urls = http://foo.tld/my_super_egg|svn|666 # checkout and install this egg from svn at revision 666
+* eggs
 
-            Plone
-            lxml
+    A list of egg requirements to install without the version specs bit.::
 
-    * EGGNAME-patch-options
-        patch binary to use for this egg
-    * EGGNAME-patch-binary
-        Options to give to the patch program when applying patches for this egg
-    * EGGNAME-patches
-        Specific patchs for an egg name to apply at install time::
+        Plone
+        lxml
 
-            Django-patches = ${buildout:directory}/foo.patch
-    * EGGNAME-UNAME-patches
-        Same as previous, but will just occurs on this UNAME specifc OS (linux|freebsd|darwin)
-        Specific patchs for an egg name to apply at install time::
+* EGGNAME-patch-options
+    patch binary to use for this egg
+* EGGNAME-patch-binary
+    Options to give to the patch program when applying patches for this egg
+* EGGNAME-patches
+    Specific patchs for an egg name to apply at install time::
 
-            Django-linux-patches = ${buildout:directory}/foo.patch
+        Django-patches = ${buildout:directory}/foo.patch
+* EGGNAME-UNAME-patches
+    Same as previous, but will just occurs on this UNAME specifc OS (linux|freebsd|darwin)
+    Specific patchs for an egg name to apply at install time::
 
-    * versions
-        Default to buildout:versions. versions part to use to pin the version of the installed eggs.
-        It defaults to buildout's one
-    * index
-        Custom eggs index (not pypi/simple). It defaults to buildout's one
-    * find-links
-        additionnal links vhere we can find eggs. It defaults to buildout's one
-    * extra-paths
-            Extra paths to include in a generated script or at build time.
-    * relative-paths
-        If set to true, then egg paths will be generated relative to the script path.
-        This allows a buildout to be moved without breaking egg paths.
-        This option can be set in either the script section or in the buildout section.
-    * Specifying the python to use, two ways:
+        Django-linux-patches = ${buildout:directory}/foo.patch
 
-        * python
-            The name of a section to get the Python executable from. If not specified, then
-            the buildout python option is used. The Python executable is found in the
-            executable option of the named section. It defaults to buildout's one
-        * executable
-            path to the python executable to use.
+* versions
+    Default to buildout:versions. versions part to use to pin the version of the installed eggs.
+    It defaults to buildout's one
+* index
+    Custom eggs index (not pypi/simple). It defaults to buildout's one
+* find-links
+    additionnal links vhere we can find eggs. It defaults to buildout's one
+* extra-paths
+        Extra paths to include in a generated script or at build time.
+* relative-paths
+    If set to true, then egg paths will be generated relative to the script path.
+    This allows a buildout to be moved without breaking egg paths.
+    This option can be set in either the script section or in the buildout section.
+* Specifying the python to use, two ways:
 
-    * hooks
+    * python
+        The name of a section to get the Python executable from. If not specified, then
+        the buildout python option is used. The Python executable is found in the
+        executable option of the named section. It defaults to buildout's one
+    * executable
+        path to the python executable to use.
 
-      A hook is in the form /path/to/hook:CALLABLE::
+* hooks
 
-            myhook=${buildout:directory}/toto.py:foo
+  A hook is in the form /path/to/hook:CALLABLE::
 
-      Where we have toto.py::
+        myhook=${buildout:directory}/toto.py:foo
 
-            def foo(options, buildout):
-                return 'Hourray'
+  Where we have toto.py::
 
-      The complete possible hooks list:
+        def foo(options, buildout):
+            return 'Hourray'
 
-        * post-download-hook
-            hook executed after each download
-        * post-checkout-hook
-            hook executed after each checkout
-        * EGGNAME-pre-setup-hook
-            hook executed before running the setup.py dance
-        * EGGNAME-post-setup-hook
-            hook executed after running the setup.py dance
+  The complete possible hooks list:
+
+    * post-download-hook
+        hook executed after each download
+    * post-checkout-hook
+        hook executed after each checkout
+    * EGGNAME-pre-setup-hook
+        hook executed before running the setup.py dance
+    * EGGNAME-post-setup-hook
+        hook executed after running the setup.py dance
 
 Patches
 --------
@@ -184,7 +186,7 @@ As we want to show the update capability of the recipe, we will first install th
     ... parts =
     ...     part
     ... [part]
-    ... recipe=minitage.recipe:egg
+    ... recipe=minitage.recipe.egg
     ... find-links=%(index)s
     ... eggs=foo
     ... """%{'index': index_url}
@@ -213,7 +215,7 @@ Patching is easy, just put your patches in YouEgg-patches.
     ... parts =
     ...     part
     ... [part]
-    ... recipe=minitage.recipe:egg
+    ... recipe=minitage.recipe.egg
     ... find-links=%(index)s
     ... foo-patches = ${buildout:directory}/patch
     ... eggs=foo
@@ -232,11 +234,9 @@ Patching is easy, just put your patches in YouEgg-patches.
     --------------------------
     No file to patch.  Skipping patch.
     1 out of 1 hunk ignored
-    <BLANKLINE>
-    While:
-      Installing part...
-    SystemError: ('Failed', 'patch -t -Np0 < /tmp/buildout.test/minitage/eggs/patches/foo/1.0/patch_d96115b00b41e282469f73708c68bdaf/patch')
-    <BLANKLINE>
+    minitage.recipe: Installation error.
+    minitage.recipe: Message was:
+            ('Failed', 'patch -t -Np0 < /tmp/buildout.test/minitage/eggs/patches/foo/1.0/patch_d96115b00b41e282469f73708c68bdaf/patch')...
 
 Oups, the patch level ! .
 
@@ -248,7 +248,7 @@ Oups, the patch level ! .
     ... parts =
     ...     part
     ... [part]
-    ... recipe=minitage.recipe:egg
+    ... recipe=minitage.recipe.egg
     ... find-links=%(index)s
     ... eggs=foo
     ... foo-patches = ${buildout:directory}/patch
@@ -290,13 +290,13 @@ In all cases our buildout is patched.
 ..     ...     part
 ..     ... versions = versions
 ..     ... [part]
-..     ... recipe=minitage.recipe:egg
+..     ... recipe=minitage.recipe.egg
 ..     ... find-links=%(index)s
 ..     ... eggs=foo
 ..     ... foo-patches = ${buildout:directory}/patch
 ..     ... foo-patch-options = -Np1
 ..     ... [t]
-..     ... recipe=minitage.recipe:egg
+..     ... recipe=minitage.recipe.egg
 ..     ... find-links=%(index)s
 ..     ... eggs=foo
 ..     ... """%{'index': index_url}
@@ -326,7 +326,7 @@ buildout not to install the new foo-2.0 version.
     ...     part
     ... versions = versions
     ... [t]
-    ... recipe=minitage.recipe:egg
+    ... recipe=minitage.recipe.egg
     ... find-links=%(index)s
     ... eggs=foo
     ... """%{'index': index_url}
@@ -364,7 +364,7 @@ It s possible to install an egg from a known url without any indexing system.
     ... parts =
     ...     part
     ... [part]
-    ... recipe=minitage.recipe:egg
+    ... recipe=minitage.recipe.egg
     ... urls=file://${buildout:directory}/foo-1.0.tar.gz
     ... """
     >>> touch('buildout.cfg', data=data)
@@ -386,7 +386,7 @@ even if we have some other similar egg on index or find-links.
         part
     versions = versions
     [part]
-    recipe=minitage.recipe:egg
+    recipe=minitage.recipe.egg
     urls=file://${buildout:directory}/foo-1.0.tar.gz...
     [versions]
     foo...=...1.0...
@@ -401,7 +401,7 @@ If we try to install a newer version, via an url, it will work, even if the vers
     ... parts =
     ...     part
     ... [part]
-    ... recipe=minitage.recipe:egg
+    ... recipe=minitage.recipe.egg
     ... urls=file://${buildout:directory}/foo-2.0.tar.gz
     ... """
     >>> touch('buildout.cfg', data=data)
@@ -415,7 +415,7 @@ If we try to install a newer version, via an url, it will work, even if the vers
         part
     versions = versions
     [part]
-    recipe=minitage.recipe:egg
+    recipe=minitage.recipe.egg
     urls=file://${buildout:directory}/foo-2.0.tar.gz...
     [versions]
     foo = 2.0...
@@ -455,7 +455,7 @@ we ll use it to check the already present distribution files in the cache.
     ... parts =
     ...     part
     ... [part]
-    ... recipe = minitage.recipe:egg
+    ... recipe = minitage.recipe.egg
     ... eggs=mr.developer
     ... """
     >>> touch('buildout.cfg', data=data)
@@ -500,10 +500,10 @@ we ll use it to check the already present distribution files in the cache.
     ... parts =
     ...     part
     ... [part]
-    ... recipe = minitage.recipe:egg
+    ... recipe = minitage.recipe.egg
     ... eggs=mr.developer
     ... [a]
-    ... recipe=minitage.recipe:egg
+    ... recipe=minitage.recipe.egg
     ... urls=
     ...     http://pypi.python.org/packages/source/m/minitage.core/minitage.core-1.0.4.tar.gz#md5=1e30ceabd1b012e33b1d2f327f6609b5
     ...     http://pypi.python.org/packages/source/m/minitage.paste/minitage.paste-1.1.tar.gz#md5=b9076b78a17f2247f68d232368fcc8f0
@@ -531,10 +531,10 @@ The versions are pinned to use your downloaded stuff
     parts =
         part
     [part]
-    recipe = minitage.recipe:egg
+    recipe = minitage.recipe.egg
     eggs=mr.developer
     [a]
-    recipe=minitage.recipe:egg
+    recipe=minitage.recipe.egg
     urls=
         http://pypi.python.org/packages/source/m/minitage.core/minitage.core-1.0.4.tar.gz#md5=1e30ceabd1b012e33b1d2f327f6609b5
         http://pypi.python.org/packages/source/m/minitage.paste/minitage.paste-1.1.tar.gz#md5=b9076b78a17f2247f68d232368fcc8f0
