@@ -142,6 +142,9 @@ def redo_pyc(egg, executable=sys.executable, environ=os.environ):
     except py_compile.PyCompileError, error:
         logger.warning("Couldn't compile %s", filepath)
 
+class EggPatchError(Exception):
+    """."""
+
 class Recipe(common.MinitageCommonRecipe):
     """
     Downloads and installs a distutils Python distribution.
@@ -917,6 +920,8 @@ class Recipe(common.MinitageCommonRecipe):
                             working_set,
                             already_installed_dependencies
                         )
+                    except EggPatchError, e:
+                        raise
                     except SystemError, e:
                         raise
                     except Exception, e:
@@ -1392,18 +1397,21 @@ class Recipe(common.MinitageCommonRecipe):
         version, patch_cmd, patch_options, patches, additionnal = self._get_dist_patches(dist.project_name, dist.version)
         # not patched ?
         if len(patches):
-            common. MinitageCommonRecipe._patch(
-                self,
-                location,
-                patch_cmd = patch_cmd,
-                patch_options = patch_options,
-                patches = patches,
-                download_dir = os.path.join(self.download_cache,
-                                            'patches',
-                                            dist.project_name,
-                                            dist.version)
-            )
-            dist = dist.clone(**{'version': version})
+            try:
+                common. MinitageCommonRecipe._patch(
+                    self,
+                    location,
+                    patch_cmd = patch_cmd,
+                    patch_options = patch_options,
+                    patches = patches,
+                    download_dir = os.path.join(self.download_cache,
+                                                'patches',
+                                                dist.project_name,
+                                                dist.version)
+                )
+                dist = dist.clone(**{'version': version})
+            except Exception, e:
+                raise EggPatchError('%s' % e)
         return bool(len(patches)), dist
 
     def _sanitizeenv(self, ws):
