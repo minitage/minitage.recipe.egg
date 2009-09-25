@@ -1063,7 +1063,8 @@ class Recipe(common.MinitageCommonRecipe):
                 # avoid conflict errors
                 similar_dist = working_set.find(pkg_resources.Requirement.parse(dist.project_name))
                 if similar_dist and (similar_dist != dist):
-                    working_set.entries.remove(similar_dist.location)
+                    if similar_dist.location in working_set.entries:
+                        working_set.entries.remove(similar_dist.location)
                     if similar_dist.location in working_set.entry_keys:
                         del working_set.entry_keys[similar_dist.location]
                     if similar_dist.project_name in working_set.by_key:
