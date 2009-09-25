@@ -43,6 +43,7 @@ import tempfile
 import subprocess
 import py_compile
 import logging
+from pprint import pprint
 
 from ConfigParser import NoOptionError
 import iniparse as ConfigParser
@@ -145,6 +146,45 @@ def redo_pyc(egg, executable=sys.executable, environ=os.environ):
 class EggPatchError(Exception):
     """."""
 
+def dependency_resolver_decorator(f):
+    def callback(self, *args, **kwargs):
+        ret = None
+        try:
+            ret = f(self, *args, **kwargs)
+        except pkg_resources.VersionConflict, e:
+            dist, req = e.args
+            if self.logger.getEffectiveLevel() < logging.DEBUG:
+                print "FULL DEPENDENCIES MAPPING"
+                keys = self.dependency_tree.keys()
+                def asort(a, b):
+                    if a.project_name > b.project_name:
+                        return 1
+                    if a.project_name == b.project_name:
+                        return 0
+                    if a.project_name <  b.project_name:
+                        return -1
+                keys.sort(asort)
+                for key in keys:
+                    print "%s is required by:" % self._constrain_requirement(key)
+                    for i in self.dependency_tree[key]:
+                        print "  * %s %s" % (i.project_name, i.version)
+            print
+            print 'Eggs depending on %s' % req
+            for i in self.dependency_tree.get(req, []):
+                print "    * %s %s" % (i.project_name, i.version)
+            print "Distribution installed %s %s is required by:" % (dist.project_name, dist.version)
+            dreqs = self.dependency_tree.get(
+                pkg_resources.Requirement.parse(dist.project_name),
+                []
+            )
+            if dist.version and not (dist.version == '0.0'):
+                dreqs = self.dependency_tree.get(dist.as_requirement(), [])
+            for i in dreqs:
+                print "    * %s %s" % (i.project_name, i.version)
+            raise e
+        return ret
+    return callback
+
 class Recipe(common.MinitageCommonRecipe):
     """
     Downloads and installs a distutils Python distribution.
@@ -157,6 +197,7 @@ class Recipe(common.MinitageCommonRecipe):
         # minitage-cache/eggs
         # separate archives in downloaddir/minitage
         self.lastlogs = []
+        self.dependency_tree = {}
         options['bin-directory'] = buildout['buildout']['bin-directory']
         self.download_cache = os.path.abspath(
             os.path.join(self.download_cache, 'eggs')
@@ -269,6 +310,7 @@ class Recipe(common.MinitageCommonRecipe):
         """update."""
         self.install()
 
+    @dependency_resolver_decorator
     def install(self):
         """installs an egg
         """
@@ -279,6 +321,7 @@ class Recipe(common.MinitageCommonRecipe):
             self.logger.error('Message was:\n\t%s' % e)
         return []
 
+    @dependency_resolver_decorator
     def working_set(self, extras=None, working_set=None, dest=None):
         """real recipe method but renamed for convenience as
         we do not return a path tuple but a workingset
@@ -817,6 +860,14 @@ class Recipe(common.MinitageCommonRecipe):
             items = constrained_requirements
         return items
 
+    def feed_dependency_tree(self, requirements, dist):
+        for mreq in requirements:
+            req = self._constrain_requirement(mreq)
+            if not req in self.dependency_tree:
+                self.dependency_tree[req] = []
+            if not dist in self.dependency_tree[req]:
+                self.dependency_tree[req].append(dist)
+
     def ensure_dependencies_there(self,
                                   dest,
                                   working_set,
@@ -837,6 +888,7 @@ class Recipe(common.MinitageCommonRecipe):
             r = self.inst._constrain(dist.as_requirement())
             already_installed_dependencies.setdefault(r.project_name, r)
             deps_reqs.extend(dist.requires())
+            self.feed_dependency_tree(dist.requires(), dist)
         if deps_reqs:
             ideps_reqs = self.filter_already_installed_requirents(
                 deps_reqs,
@@ -1000,6 +1052,7 @@ class Recipe(common.MinitageCommonRecipe):
                         already_installed_dependencies,
                         first_call=False
                     )
+                    self.feed_dependency_tree(dist.requires(requirement.extras), dist)
                 dists.append(dist)
 
             for dist in dists:
@@ -1014,6 +1067,7 @@ class Recipe(common.MinitageCommonRecipe):
                         del working_set.by_key[similar_dist.project_name]
 
                 working_set.add(dist)
+                self.feed_dependency_tree(dist.requires(), dist)
                 # Check whether we picked a version and, if we did, report it:
                 if not (
                     dist.precedence == pkg_resources.DEVELOP_DIST
