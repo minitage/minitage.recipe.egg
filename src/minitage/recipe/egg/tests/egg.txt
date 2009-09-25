@@ -49,11 +49,19 @@ Please look for options at : http://pypi.python.org/pypi/minitage.recipe.common#
     Specific patchs for an egg name to apply at install time::
 
         Django-patches = ${buildout:directory}/foo.patch
+
 * EGGNAME-UNAME-patches
     Same as previous, but will just occurs on this UNAME specifc OS (linux|freebsd|darwin)
     Specific patchs for an egg name to apply at install time::
 
         Django-linux-patches = ${buildout:directory}/foo.patch
+
+* EGGNAME-VERSION-patches
+    patches apply only on this specific version
+
+* EGGNAME-VERSION-UNAME-patches
+    patches apply only on this specific version
+
 
 * versions
     Default to buildout:versions. versions part to use to pin the version of the installed eggs.

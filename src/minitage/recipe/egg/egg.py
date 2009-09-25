@@ -151,6 +151,9 @@ def dependency_resolver_decorator(f):
         ret = None
         try:
             ret = f(self, *args, **kwargs)
+        #except Exception, e:
+        #    import pdb;pdb.set_trace()  ## Breakpoint ##
+        #    raise e
         except pkg_resources.VersionConflict, e:
             dist, req = e.args
             if self.logger.getEffectiveLevel() < logging.DEBUG:
@@ -752,7 +755,7 @@ class Recipe(common.MinitageCommonRecipe):
         while sysargv:
             try:
                 arg = sysargv.pop(0)
-                if arg == '-c':
+                if re.match('-.*c', arg):
                     fconfig = sysargv.pop()
                     break
             except IndexError:
@@ -1412,6 +1415,24 @@ class Recipe(common.MinitageCommonRecipe):
             splitstrip(
                 options.get(
                     '%s-%s-patches' % (name,
+                                       self.uname.lower()),
+                    ''
+                )
+            )
+        )
+        # specific version
+        patches.extend(
+            splitstrip(
+                options.get(
+                    '%s-%s-patches' % (name, version),
+                    ''
+                )
+            )
+        )
+        patches.extend(
+            splitstrip(
+                options.get(
+                    '%s--%s-%s-patches' % (name, version,
                                        self.uname.lower()),
                     ''
                 )
