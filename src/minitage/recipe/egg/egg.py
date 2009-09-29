@@ -1267,11 +1267,11 @@ class Recipe(common.MinitageCommonRecipe):
             except OSError, e:
                 # better to delete / copy
                 remove_path(newloc)
-                if os.path.isdir(location):
-                    shutil.copytree(location, newloc)
+                if os.path.isdir(d.location):
+                    shutil.copytree(d.location, newloc)
                 else:
-                    shutil.copy2(location, newloc)
-                remove_path(location)
+                    shutil.copy2(d.location, newloc)
+                remove_path(d.location)
 
             # regenerate pyc's in this directory
             if os.path.isdir(newloc):
@@ -1317,9 +1317,9 @@ class Recipe(common.MinitageCommonRecipe):
         args = ('-c', zc.buildout.easy_install._easy_install_cmd, ez_args,
                 zc.buildout.easy_install. _safe_arg(prefix))
         if self.zip_safe:
-            args += ('-z', )
-        else:
             args += ('-Z', )
+        else:
+            args += ('-z', )
 
         args += ('-v', )
 
