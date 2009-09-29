@@ -1271,6 +1271,7 @@ class Recipe(common.MinitageCommonRecipe):
                     shutil.copytree(location, newloc)
                 else:
                     shutil.copy2(location, newloc)
+                remove_path(location)
 
             # regenerate pyc's in this directory
             if os.path.isdir(newloc):
