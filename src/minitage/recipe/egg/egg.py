@@ -107,7 +107,7 @@ def merge_specs(a, b):
     return a
 
 def redo_pyc(egg, executable=sys.executable, environ=os.environ):
-    print "Location : %s" % egg
+    #print "Location : %s" % egg
     logger = logging.getLogger('minitage.recipe PyCompiler')
     if not os.path.isdir(egg):
         return
@@ -1266,11 +1266,15 @@ class Recipe(common.MinitageCommonRecipe):
                 os.rename(d.location, newloc)
             except OSError, e:
                 # better to delete / copy
-                if os.path.exists(newloc):
-                    remove_path(newloc)
-                shutil.copytree(location, newloc)
+                remove_path(newloc)
+                if os.path.isdir(location):
+                    shutil.copytree(location, newloc)
+                else:
+                    shutil.copy2(location, newloc)
+
             # regenerate pyc's in this directory
-            redo_pyc(os.path.abspath(newloc), executable = self.executable)
+            if os.path.isdir(newloc):
+                redo_pyc(os.path.abspath(newloc), executable = self.executable)
             nd = pkg_resources.Distribution.from_filename(
                 newloc, metadata=pkg_resources.PathMetadata(
                     newloc, os.path.join(newloc, 'EGG-INFO')
@@ -1311,9 +1315,9 @@ class Recipe(common.MinitageCommonRecipe):
         args = ('-c', zc.buildout.easy_install._easy_install_cmd, ez_args,
                 zc.buildout.easy_install. _safe_arg(prefix))
         if self.zip_safe:
-            args += ('-Z', )
-        else:
             args += ('-z', )
+        else:
+            args += ('-Z', )
 
         args += ('-v', )
 
