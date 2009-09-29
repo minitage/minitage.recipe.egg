@@ -44,6 +44,7 @@ import subprocess
 import py_compile
 import logging
 from pprint import pprint
+from distutils.dir_util import copy_tree
 
 from ConfigParser import NoOptionError
 import iniparse as ConfigParser
@@ -55,7 +56,7 @@ import zc.buildout.easy_install
 from minitage.recipe.common import common
 from minitage.core.fetchers.interfaces import IFetcherFactory
 from minitage.core import core
-from minitage.core.common import splitstrip
+from minitage.core.common import splitstrip, remove_path
 
 PATCH_MARKER = 'ZMinitagePatched'
 orig_versions_re = re.compile('-*%s.*' % PATCH_MARKER, re.U|re.S)
@@ -1261,7 +1262,13 @@ class Recipe(common.MinitageCommonRecipe):
                 else:
                     os.remove(newloc)
 
-            os.rename(d.location, newloc)
+            try:
+                os.rename(d.location, newloc)
+            except OSError, e:
+                # better to delete / copy
+                if os.path.exists(newloc):
+                    remove_path(newloc)
+                shutil.copytree(location, newloc)
             # regenerate pyc's in this directory
             redo_pyc(os.path.abspath(newloc), executable = self.executable)
             nd = pkg_resources.Distribution.from_filename(
