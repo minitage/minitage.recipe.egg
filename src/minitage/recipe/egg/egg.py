@@ -548,7 +548,7 @@ class Recipe(common.MinitageCommonRecipe):
         # last try, testing sources (very useful for offline mode
         # or when your egg is not indexed)
         avail = env.best_match(requirement, working_set)
-        if avail:
+        if avail and avail.precedence  == pkg_resources.SOURCE_DIST:
             results.append(avail)
         if not results:
             # maybe we can get one on the available indexes !
@@ -560,7 +560,10 @@ class Recipe(common.MinitageCommonRecipe):
                                    and (sdist in requirement)]
                 def md5sort(x):
                     p = urlparse.urlparse(x.location)
-                    if 'md5=' in p.fragment:
+                    # tuple in python2.4
+                    if not isinstance(p, tuple):
+                        p = tuple(p)
+                    if 'md5=' in p[-1]:
                         return 0
                     return 1
                 sorted_dict, keys = {}, []
@@ -680,6 +683,8 @@ class Recipe(common.MinitageCommonRecipe):
         #                        break
 
         if len(patches):
+            if PATCH_MARKER in v:
+                self.inst._versions[requirement.project_name] = v
             # forge the patched requirement reporesentation
             # if we cant determine the version from the requirement, it was not
             # already patched, we must have a distribution or an available
@@ -738,6 +743,7 @@ class Recipe(common.MinitageCommonRecipe):
                             else:
                                 raise
                         avail = self._search_sdist(requirement, working_set)
+                        requirement = pkg_resources.Requirement.parse('%s==%s' % (requirement.project_name, v))
         # Mark buildout, recipes and installers to use our specific egg!
         # Even, if we have already installed, in case user or something else
         # removed it!
@@ -941,7 +947,13 @@ class Recipe(common.MinitageCommonRecipe):
                 # installing extras if required
                 if dist is None:
                     try:
-                        fdist = self._get_dist(avail, working_set)
+                        # if we come from a patched distribution, i have already
+                        # searched the sdist which fits with the requirement.
+                        # We will force to download it
+                        force_location = False
+                        if PATCH_MARKER in '%s' % maybe_patched_requirement:
+                            force_location = True
+                        fdist = self._get_dist(avail, working_set, force_location=force_location)
                     except:
                         # try to find the same distribution on other links,
                         # eg when the download_url returns 404 or error
@@ -1185,6 +1197,7 @@ class Recipe(common.MinitageCommonRecipe):
         if requires and not self.options.get('ez-nodependencies'):
             r = dist.as_requirement()
             if not r.project_name in already_installed_dependencies:
+                r = self._constrain_requirement(r)
                 already_installed_dependencies[r.project_name] = r
             _, working_set = self._install_requirements(requires,
                                        dest,
@@ -1362,7 +1375,7 @@ class Recipe(common.MinitageCommonRecipe):
 
         os.chdir(cwd)
 
-    def _get_dist(self, avail, working_set):
+    def _get_dist(self, avail, working_set, force_location=True):
         """Get a distribution."""
 
         requirement = pkg_resources.Requirement.parse(
@@ -1386,6 +1399,8 @@ class Recipe(common.MinitageCommonRecipe):
                 link = os.path.dirname(link)
             self.inst._index.add_find_links([link])
         source = self.inst._index.obtain(requirement).location
+        if force_location:
+            source = avail.location
         # download to cache/FIRSTLETTER/Archive
         filename = self._download(
             url=source,

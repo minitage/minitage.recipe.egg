@@ -11,6 +11,8 @@ UP
       buildout as it make cross device references errors when renaming from
       sandbox
     - zipped egg bugfix
+    - make sdist take precedence over eggs when you are patching on the fly.
+    - bugfix for compatibility with python2.4 and urlparse(tuple)
 
 1.38
 ------
