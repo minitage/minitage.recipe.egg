@@ -1281,10 +1281,11 @@ class Recipe(common.MinitageCommonRecipe):
                 )
             )
             result.append(nd)
-        self._call_hook(
-            '%s-post-setup-hook' % (d.project_name.lower()),
-            newloc
-        )
+        if os.path.isdir(nd.location):
+            self._call_hook(
+                '%s-post-setup-hook' % (d.project_name.lower()),
+                newloc
+            )
         if not dest in self.eggs_caches:
             self.eggs_caches += [dest]
         rdist = None

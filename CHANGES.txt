@@ -10,6 +10,7 @@ UP
     - ugly bugfix when your egg cache is not on the same partition as the
       buildout as it make cross device references errors when renaming from
       sandbox
+    - zipped egg bugfix
 
 1.38
 ------
