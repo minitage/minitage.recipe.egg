@@ -13,6 +13,7 @@ UP
     - zipped egg bugfix
     - make sdist take precedence over eggs when you are patching on the fly.
     - bugfix for compatibility with python2.4 and urlparse(tuple)
+    - add bdist_ext options support like zc.recipe.egg:custom
 
 1.38
 ------

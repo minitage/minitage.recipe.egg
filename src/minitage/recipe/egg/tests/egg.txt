@@ -114,6 +114,45 @@ Please look for options at : http://pypi.python.org/pypi/minitage.recipe.common#
     * EGGNAME-post-setup-hook
         hook executed after running the setup.py dance
 
+
+BDIST EGGS OPTIONS:
+
+* define
+
+    A comma-separated list of names of C preprocessor variables to define.
+
+* undef
+
+    A comman separated list of names of C preprocessor variables to undefine.
+
+* link-objects
+
+    The name of an link object to link against. Due to limitations in distutils and desprite the option name, only a single link object can be specified.
+
+* debug
+
+    Compile/link with debugging information
+
+* force
+
+    Forcibly build everything (ignore file timestamps)
+
+* compiler
+
+    Specify the compiler type
+
+* swig
+
+    The path to the swig executable
+* swig-cpp
+
+    Make SWIG create C++ files (default is C)
+
+* swig-opts
+
+    List of SWIG command line options
+
+
 Patches
 --------
 
@@ -528,7 +567,6 @@ We ll use it to check the already present distribution files in the cache.
     minitage.recipe: Installed minitage.paste 1.1 (/tmp/buildout.test/eggs/minitage.paste-1.1-py...egg).
     minitage.recipe: Pinning custom egg version in buildout, trying to write the configuration
     minitage.recipe: CREATING buildout backup in /tmp/buildout.test/buildout.cfg.before.fixed_version.bak...
-    minitage.recipe: All egg dependencies seem to be installed!...
 
 The versions are pinned to use your downloaded stuff
 

@@ -197,7 +197,7 @@ def doc_suite(test_dir, setUp=None, tearDown=None, globs=None):
 
     # filtering files on extension
     docs = [os.path.join(doctest_dir, doc) for doc in
-            os.listdir(doctest_dir) if doc.endswith('.txt')
+            os.listdir(doctest_dir) if doc.endswith('m.txt')
            ]
 
     for ftest in docs:

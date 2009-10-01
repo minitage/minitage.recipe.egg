@@ -47,10 +47,10 @@ import logging
 from pprint import pprint
 from distutils.dir_util import copy_tree
 
+import setuptools
 from ConfigParser import NoOptionError
 import iniparse as ConfigParser
 import pkg_resources
-import setuptools.archive_util
 from setuptools.command import easy_install
 import zc.buildout.easy_install
 
@@ -220,6 +220,24 @@ class Recipe(common.MinitageCommonRecipe):
         self.download_cache = os.path.abspath(
             os.path.join(self.download_cache, 'eggs')
         )
+
+        build_ext_options = {}
+        swig = options.get('swig')
+        if swig:
+            options['swig'] = build_ext_options['swig'] = os.path.join(
+                buildout['buildout']['directory'],
+                swig,
+            )
+
+        for be_option in ('define', 'undef', 'libraries', 'link-objects',
+                          'debug', 'force', 'compiler', 'swig-cpp', 'swig-opts',
+                          ):
+            value = options.get(be_option)
+            if value is None:
+                continue
+            self.logger.debug('Using bdist_ext option: %s=%s' % (be_option, value))
+            build_ext_options[be_option] = value
+        self.build_ext_options = build_ext_options
 
         if not os.path.isdir(self.download_cache):
             os.makedirs(self.download_cache)
@@ -1192,7 +1210,7 @@ class Recipe(common.MinitageCommonRecipe):
     def _install_distribution(self, dist, dest, working_set=None):
         """Install a setuptool distribution
         into the eggs cache."""
-
+        patched, repackaged = False, False
         if not self.already_installed_dependencies:
             self.already_installed_dependencies = {}
         # where we put the builded  eggs
@@ -1206,6 +1224,17 @@ class Recipe(common.MinitageCommonRecipe):
             location = tempfile.mkdtemp()
             self._unpack(dist.location, location)
             location = self._get_compil_dir(location)
+            # setup build_ext
+            setup_cfg = os.path.join(location, 'setup.cfg')
+            if not os.path.exists(setup_cfg):
+                f = open(setup_cfg, 'w')
+                f.close()
+            if self.build_ext_options:
+                repackaged = True
+                setuptools.command.setopt.edit_config(
+                    setup_cfg,
+                    dict(build_ext=self.build_ext_options)
+                )
         sub_prefix = self.options.get(
             '%s-build-dir' % ( dist.project_name.lower()),
             None
@@ -1214,8 +1243,7 @@ class Recipe(common.MinitageCommonRecipe):
             location = os.path.join(location, sub_prefix)
 
         self.options['compile-directory'] = location
-        repackage = False
-        patched = False
+
 
         if not location.endswith('.egg'):
             # maybe patch time
@@ -1227,6 +1255,7 @@ class Recipe(common.MinitageCommonRecipe):
             )
             if patched or hooked:
                 patched = True
+
         # recursivly easy installing dependencies
         ez = easy_install.easy_install(distutils.core.Distribution())
         if os.path.isdir(location):
@@ -1255,7 +1284,7 @@ class Recipe(common.MinitageCommonRecipe):
         if not (dist.precedence in (pkg_resources.EGG_DIST,
                                     pkg_resources.BINARY_DIST,
                                     pkg_resources.DEVELOP_DIST)):
-            if patched:
+            if patched or repackaged:
                 ttar = os.path.join(
                     tempfile.mkdtemp(), '%s-%s.%s' % (dist.project_name,
                                                       dist.version,
@@ -1284,6 +1313,8 @@ class Recipe(common.MinitageCommonRecipe):
         # recusivly install dist requirements before finnishing to install it.
         if requires and not self.options.get('ez-nodependencies'):
             _, working_set = self._install_requirements(requires, dest, working_set, first_call = False)
+
+
 
         # install code ( calling ez and etc.)
         self._run_easy_install(tmp, ['%s' % dist_location], working_set=working_set)
