@@ -42,6 +42,7 @@ import tarfile
 import tempfile
 import subprocess
 import py_compile
+import traceback
 import logging
 from pprint import pprint
 from distutils.dir_util import copy_tree
@@ -64,6 +65,8 @@ orig_versions_re = re.compile('-*%s.*' % PATCH_MARKER, re.U|re.S)
 def get_orig_version(version):
     if not version: version = ''
     return orig_versions_re.sub('', version)
+
+class IncompatibleVersionError(zc.buildout.easy_install.IncompatibleVersionError): pass
 
 def get_requirement_version(requirement):
     patched_egg, version= False, None
@@ -152,13 +155,14 @@ def dependency_resolver_decorator(f):
         ret = None
         try:
             ret = f(self, *args, **kwargs)
-        #except Exception, e:
-        #    import pdb;pdb.set_trace()  ## Breakpoint ##
+        #except IncompatibleVersionError, e:
+        #    print e.args[2]
         #    raise e
         except pkg_resources.VersionConflict, e:
-            dist, req = e.args
-            if self.logger.getEffectiveLevel() < logging.DEBUG:
-                print "FULL DEPENDENCIES MAPPING"
+            idist, req = e.args
+            if self.logger.getEffectiveLevel() <= logging.DEBUG:
+                print
+                print "* Full dependencies mapping:"
                 keys = self.dependency_tree.keys()
                 def asort(a, b):
                     if a.project_name > b.project_name:
@@ -171,20 +175,30 @@ def dependency_resolver_decorator(f):
                 for key in keys:
                     print "%s is required by:" % self._constrain_requirement(key)
                     for i in self.dependency_tree[key]:
-                        print "  * %s %s" % (i.project_name, i.version)
+                        dist = self.dependency_tree[key][i]
+                        print "  * %s %s (%s)" % (dist.project_name, dist.version, dist.location)
             print
-            print 'Eggs depending on %s' % req
+            print '* Eggs depending on %s (requirement):' % req
             for i in self.dependency_tree.get(req, []):
-                print "    * %s %s" % (i.project_name, i.version)
-            print "Distribution installed %s %s is required by:" % (dist.project_name, dist.version)
-            dreqs = self.dependency_tree.get(
-                pkg_resources.Requirement.parse(dist.project_name),
-                []
-            )
-            if dist.version and not (dist.version == '0.0'):
-                dreqs = self.dependency_tree.get(dist.as_requirement(), [])
+                dist = self.dependency_tree[req][i]
+                print "    * %s %s (%s)" % (dist.project_name, dist.version, dist.location)
+            print "* Eggs depending on %s (already installed distribution):" % (dist.as_requirement())
+            # by project_name
+            selector = idist.project_name
+            dreqs = self.dependency_tree.get(pkg_resources.Requirement.parse(selector), [])
+            selector = idist.as_requirement()
+            if idist.version and not (idist.version == '0.0'):
+                # filter by version
+                dreqs = self.dependency_tree.get(selector, [])
             for i in dreqs:
-                print "    * %s %s" % (i.project_name, i.version)
+                dist = self.dependency_tree[selector][i]
+                print "    * %s %s (%s)" % (dist.project_name, dist.version, dist.location)
+            print "This conflicting installed distribution %s %s is installed in %s." % (idist.project_name, idist.version, idist.location)
+            print
+            print
+            raise e
+        except Exception, e:
+            self.logger.error(traceback.format_exc())
             raise e
         return ret
     return callback
@@ -288,6 +302,12 @@ class Recipe(common.MinitageCommonRecipe):
         if self.offline:
             self.index = 'file://%s' % self.eggs_caches[0]
             self.find_links = []
+            self.options['allow-hosts'] = 'None'
+            self.buildout['buildout']['allow-hosts'] = 'None'
+            self.buildout._allow_hosts = ('None',)
+
+        zc.buildout.easy_install.Installer._download_cache = self.download_cache
+        zc.buildout.easy_install.Installer._always_unzip = True
         self.inst = zc.buildout.easy_install.Installer(
             dest=None,
             index=self.index,
@@ -297,6 +317,7 @@ class Recipe(common.MinitageCommonRecipe):
             versions=self.buildout.get('versions', {}),
             path=self.eggs_caches,
             newest = self.buildout.newest,
+
             allow_hosts=self.options.get('allow-hosts',
                                          self.buildout.get('allow-hosts', {})
                                          ),
@@ -309,6 +330,7 @@ class Recipe(common.MinitageCommonRecipe):
 
         # intiatiate environement cache
         self.scan()
+        self.already_installed_dependencies = {}
 
     def update(self):
         """update."""
@@ -383,6 +405,7 @@ class Recipe(common.MinitageCommonRecipe):
             self.logger.info('-------------------------------------------------------')
         return ['%s' % r for r in requirements], working_set
 
+    @dependency_resolver_decorator
     def install_static_distributions(self,
                                      working_set=None,
                                      urls=None,
@@ -401,10 +424,11 @@ class Recipe(common.MinitageCommonRecipe):
         dists = []
         for i, url in enumerate(urls):
             fname = self._download(url=url, cache=True)
+            bfname = os.path.basename(fname)
             # if it is a repo, making a local copy
             # and scan its distro
             if os.path.isdir(fname):
-                self._call_hook('post-download-hook', fname)
+                self._call_hook('%s-post-download-hook'%bfname, fname)
                 tmp = os.path.join(self.tmp_directory, os.path.basename(fname))
                 f = IFetcherFactory(self.minitage_config)
                 for fetcher in f.products:
@@ -416,20 +440,37 @@ class Recipe(common.MinitageCommonRecipe):
                             break
                 # go inside dist and scan for setup.py
                 self.options['compile-directory'] = tmp
-                self._call_hook('post-checkout-hook', tmp)
+                if os.path.isdir(tmp):
+                    self._call_hook('%s-post-checkout-hook'%bfname, tmp)
                 # build the egg distribution in there.
                 self._sanitizeenv(working_set)
                 # recursivly easy installing dependencies
                 ez = easy_install.easy_install(distutils.core.Distribution())
                 oldcwd = os.getcwd()
                 # generating metadata for source distributions
+                #
+                _, _, _, directory, _ = common.divide_url(url)
+                if not directory:
+                    directory = self.urls.get(url, {}).get('directory', '')
                 sdist_files = []
                 try:
                     os.chdir(tmp)
-                    os.system('%s setup.py sdist' % sys.executable)
+                    if directory:
+                        self.logger.debug('Going into subdir: %s' % directory)
+                        os.chdir(directory)
+                    sdist_args = '-q'
+                    if not os.path.isfile('setup.py'):
+                        raise Exception('Invalid distribution in %s'
+                                        ' . No setup.py.' % tmp)
+                    sdist_post_args = '2>&1 >> /dev/null'
+                    if self.logger.getEffectiveLevel() <= logging.DEBUG:
+                        sdist_args, sdist_post_args = '', ''
+
+                    ret = os.system('%s setup.py %s sdist %s' % (sys.executable, sdist_args, sdist_post_args))
                     sdist_files = [os.path.join(tmp, 'dist', a) for a in os.listdir('dist')]
                 except Exception, e:
-                    pass
+                    self.logger.error('sdist in %s failed' % os.getcwd())
+                    raise
                 os.chdir(oldcwd)
                 # repackage the checkout as a dist.
                 if sdist_files:
@@ -442,7 +483,10 @@ class Recipe(common.MinitageCommonRecipe):
                                              )
                     )
                     tar = tarfile.open(ttar, mode='w:gz')
-                    tar.add(tmp, nd.project_name)
+                    root = tmp
+                    if directory:
+                        root = os.path.join(root, directory)
+                    tar.add(root, nd.project_name)
                     tar.close()
                     dists.append(get_first_dist(ttar))
             else:
@@ -496,7 +540,7 @@ class Recipe(common.MinitageCommonRecipe):
                         raise
                 if sdist:
                     msg = 'If you want to rebuild, please do \'rm -rf %s\''
-                    self.logger.info(msg % sdist.location)
+                    self.logger.debug(msg % sdist.location)
                     sdist.activate()
                     # for buildout to use it !
                     working_set.add(sdist)
@@ -504,15 +548,19 @@ class Recipe(common.MinitageCommonRecipe):
                     self._pin_version(sdist.project_name, sdist.version)
                     self.versions[sdist.project_name] = sdist.version
                     self.add_dist(sdist)
+                    self.logger.info(
+                        'Activated %s %s (%s).' % (
+                            dist.project_name,
+                            dist.version,
+                            sdist.location
+                        )
+                    )
                 else:
-                    already_installed_dependencies = {}
+                    if not self.already_installed_dependencies:
+                        self.already_installed_dependencies = {}
                     for r in requirements:
-                        already_installed_dependencies[r.project_name] = r
-                    installed_dist = self._install_distribution(
-                        dist,
-                        dest,
-                        working_set,
-                        already_installed_dependencies)
+                        self.already_installed_dependencies[r.project_name] = r
+                    installed_dist = self._install_distribution(dist, dest, working_set)
                     installed_dist.activate()
                     # for buildout to use it !
                     working_set.add(installed_dist)
@@ -520,6 +568,7 @@ class Recipe(common.MinitageCommonRecipe):
                     self._pin_version(installed_dist.project_name, installed_dist.version)
                     self.versions[installed_dist.project_name] = installed_dist.version
                     self.add_dist(installed_dist)
+                    self.already_installed_dependencies[installed_dist.project_name] = installed_dist.as_requirement()
         return requirements, working_set
 
     def scan(self, scanpaths=None):
@@ -528,6 +577,7 @@ class Recipe(common.MinitageCommonRecipe):
         self.inst._env.scan(scanpaths)
 
     def _search_sdists(self, requirement, working_set, multiple=True):
+        sreq = '%s' % requirement
         env = pkg_resources.Environment(
             [self.download_cache],
             python=self.executable_version)
@@ -547,11 +597,17 @@ class Recipe(common.MinitageCommonRecipe):
             env.add(distro)
         # last try, testing sources (very useful for offline mode
         # or when your egg is not indexed)
+        # if we have a patched egg, searching for the egg first, then for the sdist that can build it
         avail = env.best_match(requirement, working_set)
-        if avail and avail.precedence  == pkg_resources.SOURCE_DIST:
-            results.append(avail)
-        if not results:
+        if not avail and PATCH_MARKER in sreq:
+            requirement = pkg_resources.Requirement.parse(orig_versions_re.sub('', sreq))
+            avail = env.best_match(requirement, working_set)
+        if avail:
+            if avail.precedence  == pkg_resources.SOURCE_DIST:
+                results.append(avail)
+        if (not results) or multiple:
             # maybe we can get one on the available indexes !
+            # if we have a patched egg, searching for the egg first, then for the sdist that can build it
             try:
                 availables = self.inst._index[requirement.key]
                 matching_sdists = [sdist
@@ -652,7 +708,8 @@ class Recipe(common.MinitageCommonRecipe):
         # Try to get the possibles patch for the project if this is the relevant
         # v can be wrong atm,if the requirement is not yet pinned to the patched
         # version !!!
-        v, _, _, patches, _ = self._get_dist_patches(requirement.project_name, v)
+
+        v, _, _, patches, patched_bits = self._get_dist_patches(requirement.project_name, v)
 
         # leads to bugs in buildout behaviour if we read things we didnt have to ;'(
         # if this is a minitage patched egg, there is a chance that the
@@ -693,16 +750,21 @@ class Recipe(common.MinitageCommonRecipe):
             if not get_orig_version(v):
                 for project in dist, avail:
                     if project:
-                        if v in project.version:
+                        if PATCH_MARKER in project.version:
                             v = project.version
                         else:
-                            v = "%s-%s" % (project.version, v)
+                            v = "%s-%s" % (project.version, patched_bits)
                             break
             requirement = pkg_resources.Requirement.parse(
                 "%s==%s" % (
                     requirement.project_name, v
                 )
             )
+            # only install sdist !
+            sdist = avail
+            if avail:
+                if avail.precedence != pkg_resources.SOURCE_DIST:
+                    sdist = None
             # Do we have a compiled distribution of the egg yet?
             dist, pavail = self.inst._satisfied(requirement)
             if dist:
@@ -711,13 +773,13 @@ class Recipe(common.MinitageCommonRecipe):
             # now, in the 2 cases: we ran another part or the part itself.
             # But in all cases, we have feeded our patches list !
             # But we may not have installed yet the egg!
-            elif avail is None:
+            elif sdist is None:
                 # do we come from elsewhere, in the contrary,
                 # We are in the case where install the egg
                 try:
                     avail = self._search_sdist(requirement,
                                                working_set)
-                except zc.buildout.easy_install.MissingDistribution:
+                except zc.buildout.easy_install.MissingDistribution, e:
                     # if this is a minitage patched egg, there is a chance that the
                     # part which build the egg was not built yet.
                     # in this case, we try to find the egg without the patched
@@ -735,8 +797,9 @@ class Recipe(common.MinitageCommonRecipe):
                                     )
                                 )
                         except Exception, e:
-                            # egg from url, needing patch !
-                            if version.startswith(PATCH_MARKER):
+                            # egg without fixed version needing patch
+                            # we remove the patch bit appended to version
+                            if version.startswith(PATCH_MARKER) or not version:
                                 requirement = pkg_resources.Requirement.parse(
                                     requirement.project_name
                                 )
@@ -773,9 +836,7 @@ class Recipe(common.MinitageCommonRecipe):
             self.buildout[self.buildout_versions][name] = version
         self.versions[name] = version
         self.inst._versions[name] = version
-        requirement = pkg_resources.Requirement.parse(
-            '%s==%s' % (name, version)
-        )
+        requirement = pkg_resources.Requirement.parse( '%s==%s' % (name, version))
         if not os.path.exists(cfg):
             self.logger.error(
                 'It seems you are not using buildout.cfg'
@@ -819,12 +880,23 @@ class Recipe(common.MinitageCommonRecipe):
         except Exception, e:
             self.logger.error('Cant pin the specific versions for %s\n%s' % (requirement, e))
 
-    def _constrain(self, requirements, dep=None):
+    def _constrain(self, requirements, fromdist=None):
         constrained_requirements = {}
         for requirement in requirements:
             if not isinstance(requirement, pkg_resources.Requirement):
                 requirement = pkg_resources.Requirement.parse(requirement)
-            constrained_req = self.inst._constrain(requirement)
+            try:
+                constrained_req = self.inst._constrain(requirement)
+            except zc.buildout.easy_install.IncompatibleVersionError, e:
+               if fromdist:
+                   msg = 'Fixed version "%s" is not consistent with the requirement "%s".\n%s' % (
+                       e.args[1],
+                       requirement,
+                       'Required by %s-%s (%s)' % (fromdist.project_name, fromdist.version, fromdist.location)
+                   )
+                   raise IncompatibleVersionError('Bad Version', e.args[1], msg)
+               else:
+                    raise e
             r = constrained_requirements.get(requirement.project_name,
                                              constrained_req)
             # constrain doesnt conserve extras :::
@@ -834,21 +906,33 @@ class Recipe(common.MinitageCommonRecipe):
             if not r.specs:
                 r = merge_specs(r, requirement)
             constrained_requirements[r.project_name] = r
+            # construct the patch version bits
+            _, _, _, patches, patch_bits = self._get_dist_patches(requirement.project_name, None)
+            if len(patches):
+                # only construct if we have fixed versions:
+                rstr = '%s' % r
+                if '==' in rstr and not PATCH_MARKER in rstr:
+                    for i, s in enumerate(r.specs):
+                        vpatch, version = False, ''
+                        if s[0] == '==':
+                            if s[1]:
+                                if not PATCH_MARKER in s[1]:
+                                    version = '%s-%s' % (s[1], patch_bits)
+                                    vpatch = True
+                        if vpatch:
+                            r.specs[i] = ('==', version)
         return constrained_requirements.values()
 
-    def _constrain_requirement(self, requirement, dep=None):
-        return self._constrain([requirement], dep)[0]
+    def _constrain_requirement(self, requirement, fromdist=None):
+        return self._constrain([requirement], fromdist)[0]
 
-    def filter_already_installed_requirents(self,
-                                            requirements,
-                                            already_installed_dependencies):
+    def filter_already_installed_requirents(self, requirements):
         items = []
         constrained_requirements = self._constrain(requirements)
-        installed_requirements = already_installed_dependencies.values()
-        if already_installed_dependencies:
+        installed_requirements = self.already_installed_dependencies.values()
+        if self.already_installed_dependencies:
             for requirement in constrained_requirements:
-                similary_req = already_installed_dependencies.get(
-                    requirement.project_name, None)
+                similary_req = self.already_installed_dependencies.get(requirement.project_name, None)
                 found = True
                 if not similary_req:
                     found = False
@@ -865,23 +949,22 @@ class Recipe(common.MinitageCommonRecipe):
                     # something new on an already installed item, mark it to be
                     # reinstalled
                     if similary_req:
-                        del already_installed_dependencies[requirement.project_name]
+                        del self.already_installed_dependencies[requirement.project_name]
         else:
             items = constrained_requirements
         return items
 
     def feed_dependency_tree(self, requirements, dist):
         for mreq in requirements:
-            req = self._constrain_requirement(mreq)
+            req = self._constrain_requirement(mreq, fromdist=dist)
+            identifier = (dist.project_name, dist.version)
             if not req in self.dependency_tree:
-                self.dependency_tree[req] = []
-            if not dist in self.dependency_tree[req]:
-                self.dependency_tree[req].append(dist)
+                self.dependency_tree[req] = {}
+            self.dependency_tree[req][identifier] = dist
 
     def ensure_dependencies_there(self,
                                   dest,
                                   working_set,
-                                  already_installed_dependencies,
                                   first_call, dists):
         """Ensure all distributionss have their dependencies in the working set.
         Alsso ensure all eggs are at rights versions pointed out by buildout.
@@ -895,36 +978,31 @@ class Recipe(common.MinitageCommonRecipe):
         """
         deps_reqs = []
         for dist in dists:
-            r = self.inst._constrain(dist.as_requirement())
-            already_installed_dependencies.setdefault(r.project_name, r)
+            r = self._constrain_requirement(dist.as_requirement(), fromdist=dist)
+            self.already_installed_dependencies.setdefault(r.project_name, r)
             deps_reqs.extend(dist.requires())
             self.feed_dependency_tree(dist.requires(), dist)
         if deps_reqs:
-            ideps_reqs = self.filter_already_installed_requirents(
-                deps_reqs,
-                already_installed_dependencies)
-            d_rs, working_set = self._install_requirements(ideps_reqs,
-                                            dest,
-                                            working_set,
-                                            already_installed_dependencies,
-                                            first_call = False)
+            ideps_reqs = self.filter_already_installed_requirents( deps_reqs)
+            d_rs, working_set = self._install_requirements(ideps_reqs, dest, working_set, first_call = False)
 
         if first_call:
             self.logger.debug('All egg dependencies seem to be installed!')
         return working_set
 
     def add_dist(self, dist):
+        # mark the distribution as installed
+        self.maybe_get_patched_requirement(dist)
         self.inst._env.add(dist)
 
     def _install_requirements(self, reqs, dest,
                               working_set=None,
-                              already_installed_dependencies=None,
                               first_call=True):
         """Get urls of neccessary eggs to
         achieve a requirement.
         """
-        if not already_installed_dependencies:
-            already_installed_dependencies = {}
+        if not self.already_installed_dependencies:
+            self.already_installed_dependencies = {}
 
         # initialise working directories
         if not os.path.exists(self.tmp_directory):
@@ -934,16 +1012,27 @@ class Recipe(common.MinitageCommonRecipe):
         else:
             working_set = working_set
 
-        requirements = self.filter_already_installed_requirents(
-            reqs,
-            already_installed_dependencies)
+        requirements = self.filter_already_installed_requirents(reqs)
         # Maybe an existing dist is already the best dist that satisfies the
         # requirement
         if requirements:
             dists = []
             #self.logger.debug('Trying to install %s' % requirements)
             for requirement in requirements:
+                similary_req = self.already_installed_dependencies.get(requirement.project_name, None)
+                if similary_req:
+                    requirers = self.dependency_tree.get(similary_req, None)
+                    msg = "'%s' is already installed." % (requirement)
+                    if ('%s'%requirement) != ('%s'%similary_req) and not (similary_req in requirement):
+                        msg = "'%s' is already installed as '%s'." % (requirement, similary_req)
+                    if requirers and self.logger.getEffectiveLevel() <= logging.DEBUG:
+                        msg += ' Requirers: %s' % (', '.join(['%s'%self.dependency_tree[similary_req][d] for d in requirers]))
+                    self.logger.debug(msg)
+                    continue
+                #try:
                 dist, avail, maybe_patched_requirement = self._satisfied(requirement, working_set)
+                #except Exception, e:
+                #    raise
                 # installing extras if required
                 if dist is None:
                     try:
@@ -954,7 +1043,7 @@ class Recipe(common.MinitageCommonRecipe):
                         if PATCH_MARKER in '%s' % maybe_patched_requirement:
                             force_location = True
                         fdist = self._get_dist(avail, working_set, force_location=force_location)
-                    except:
+                    except Exception, e:
                         # try to find the same distribution on other links,
                         # eg when the download_url returns 404 or error
                         sdist, sdists = None, self._search_sdists(requirement, working_set)
@@ -975,6 +1064,7 @@ class Recipe(common.MinitageCommonRecipe):
                                             fdist.location
                                         )
                                     )
+                                    #self.lastlogs.append('Additional error was : %s' % e)
                                 except:
                                     pass
                                 if fdist:
@@ -982,12 +1072,7 @@ class Recipe(common.MinitageCommonRecipe):
                         if not fdist:
                             raise
                     try:
-                        dist = self._install_distribution(
-                            fdist,
-                            dest,
-                            working_set,
-                            already_installed_dependencies
-                        )
+                        dist = self._install_distribution(fdist, dest, working_set)
                     except EggPatchError, e:
                         raise
                     except SystemError, e:
@@ -1019,12 +1104,7 @@ class Recipe(common.MinitageCommonRecipe):
                                         pass
                                     if fdist:
                                         try:
-                                            dist = self._install_distribution(
-                                                fdist,
-                                                dest,
-                                                working_set,
-                                                already_installed_dependencies
-                                            )
+                                            dist = self._install_distribution(fdist, dest, working_set)
                                         except Exception, e:
                                             self.lastlogs.append(
                                                 'Distribution %s == %s from %s'
@@ -1043,31 +1123,23 @@ class Recipe(common.MinitageCommonRecipe):
                                     self.lastlogs.append(
                                         'Distribution %s == %s from %s was installed '
                                         'but it was not the first seen on the indexes '
-                                        'matching the requirement although it was the first valid.' % (
+                                        'matching the requirement although it was the first valid' % (
                                             dist.project_name,
                                             dist.version,
                                             dist.location
                                         )
                                     )
+                                    self.lastlogs.append('Additional error was : %s' % e)
+
                         if not dist:
                             raise
-                    rname = requirement.project_name
-                    # mark the distribution as installed
-                    already_installed_dependencies[rname] = pkg_resources.Requirement.parse(
-                        '%s==%s' % (dist.project_name, dist.version)
-                    )
+
                     # advertise environements of our new dist
                     self.add_dist(dist)
 
                 # honouring extra requirements
                 if requirement.extras:
-                    _, working_set = self._install_requirements(
-                        dist.requires(requirement.extras),
-                        dest,
-                        working_set,
-                        already_installed_dependencies,
-                        first_call=False
-                    )
+                    _, working_set = self._install_requirements(dist.requires(requirement.extras), dest, working_set, first_call=False)
                     self.feed_dependency_tree(dist.requires(requirement.extras), dist)
                 dists.append(dist)
 
@@ -1093,28 +1165,36 @@ class Recipe(common.MinitageCommonRecipe):
                      and
                      requirement.specs[0][0] == '==')
                     ):
-                    self.logger.info('Picked: %s = %s',
+                    self.logger.debug('Picked: %s = %s',
                                       dist.project_name,
                                       dist.version)
                     if not self.inst._allow_picked_versions:
                         raise zc.buildout.UserError(
                             'Picked: %s = %s' % (dist.project_name,
                                                  dist.version))
-            working_set = self.ensure_dependencies_there(dest,
-                                                working_set,
-                                                already_installed_dependencies,
-                                                first_call, dists )
+            working_set = self.ensure_dependencies_there(dest, working_set, first_call, dists)
 
-        return already_installed_dependencies.values(), working_set
+        return self.already_installed_dependencies.values(), working_set
 
+    def maybe_get_patched_requirement(self, dist):
+        # mark the distribution as installed
+        v, _, _, patches, _ = self._get_dist_patches(dist.project_name, dist.version)
+        r = pkg_resources.Requirement.parse('%s==%s' % (dist.project_name, v))
+        if len(patches)>0:
+            self.inst._versions[r.project_name] = v
+            self.versions[r.project_name] = v
+        else:
+            # if we did not find patches for this distribution, only constrain
+            # it.
+            r = self._constrain_requirement(dist.as_requirement(), fromdist=dist)
+        return r
 
-    def _install_distribution(self, dist, dest,
-                              working_set=None, already_installed_dependencies = None):
+    def _install_distribution(self, dist, dest, working_set=None):
         """Install a setuptool distribution
         into the eggs cache."""
 
-        if not already_installed_dependencies:
-            already_installed_dependencies = {}
+        if not self.already_installed_dependencies:
+            self.already_installed_dependencies = {}
         # where we put the builded  eggs
         tmp = os.path.join(self.tmp_directory, 'eggs')
 
@@ -1136,6 +1216,7 @@ class Recipe(common.MinitageCommonRecipe):
         self.options['compile-directory'] = location
         repackage = False
         patched = False
+
         if not location.endswith('.egg'):
             # maybe patch time
             patched, dist = self._patch(location, dist)
@@ -1163,8 +1244,10 @@ class Recipe(common.MinitageCommonRecipe):
                       for a in pkg_resources.find_distributions(location)]
 
         # installing them
-        for reqs_list in reqs_lists:
-            requires.extend(self._constrain(reqs_list))
+        for i, reqs_list in enumerate(reqs_lists):
+            # do not constrain there, it will be done in the recursive install
+            # call
+            requires.extend(reqs_list)
 
         # compile time
         dist_location = dist.location
@@ -1194,17 +1277,15 @@ class Recipe(common.MinitageCommonRecipe):
             os.chdir(oldcwd)
 
         # mark the current distribution as installed to avoid circular calls
-        if requires and not self.options.get('ez-nodependencies'):
-            r = dist.as_requirement()
-            if not r.project_name in already_installed_dependencies:
-                r = self._constrain_requirement(r)
-                already_installed_dependencies[r.project_name] = r
-            _, working_set = self._install_requirements(requires,
-                                       dest,
-                                       working_set,
-                                       already_installed_dependencies,
-                                       first_call = False)
+        if not dist.project_name in self.already_installed_dependencies:
+            self.feed_dependency_tree(requires, dist)
+            self.already_installed_dependencies[dist.project_name] = self.maybe_get_patched_requirement(dist)
 
+        # recusivly install dist requirements before finnishing to install it.
+        if requires and not self.options.get('ez-nodependencies'):
+            _, working_set = self._install_requirements(requires, dest, working_set, first_call = False)
+
+        # install code ( calling ez and etc.)
         self._run_easy_install(tmp, ['%s' % dist_location], working_set=working_set)
         if os.path.exists(ttar):
             os.remove(ttar)
@@ -1311,7 +1392,7 @@ class Recipe(common.MinitageCommonRecipe):
         if not rdist:
             self.scan()
             rdist = self.inst._env.best_match(dist.as_requirement(), working_set)
-        self.logger.debug("Got %s.", rdist)
+        self.logger.info("Installed %s %s (%s)." % (rdist.project_name, rdist.version, rdist.location))
         return rdist
 
     def _run_easy_install(self, prefix, specs, caches=None, working_set=None, dist=None):
@@ -1333,8 +1414,10 @@ class Recipe(common.MinitageCommonRecipe):
             args += ('-Z', )
         else:
             args += ('-z', )
-
-        args += ('-v', )
+        if self.logger.getEffectiveLevel() <= logging.DEBUG:
+            args += ('-v', )
+        else:
+            args += ('-q', )
 
         if self.offline:
             args+= ('-H None', )
@@ -1382,7 +1465,7 @@ class Recipe(common.MinitageCommonRecipe):
             '%s == %s' % (avail.project_name, avail.version)
         )
 
-        self.logger.info('Trying to get  '
+        self.logger.debug('Trying to get '
                                  'distribution for \'%s\'' % (
                                      avail.project_name
                                  )
@@ -1414,13 +1497,18 @@ class Recipe(common.MinitageCommonRecipe):
 
         return dist
 
-    def _get_dist_patches(self, name, version, options=None):
+    def _get_dist_patches(self, name, aversion = None, options=None):
         """Get the patches for a distribution.
         returns a tuple
         patched_version_str, patch_cmd, patch_options, patches_list
         """
+        version = aversion
         if not version:
-            version = ''
+            version = self.versions.get(name, '')
+            # we got a fixed version
+            if version:
+                aversion = version
+
         # remove the minitage patch computation as we are rebuilding it!
         version = get_orig_version(version)
         if not options:
@@ -1495,9 +1583,14 @@ class Recipe(common.MinitageCommonRecipe):
                 version += "-%s" % additionnal
             else:
                 version = additionnal
+        # if we call the function without version bit and we did not find a
+        # version slug inside the [versions], just reset the version to None
+        if not aversion:
+            version = ''
         return version, patch_cmd, patch_options, patches, additionnal
 
     def _patch(self, location, dist):
+
         version, patch_cmd, patch_options, patches, additionnal = self._get_dist_patches(dist.project_name, dist.version)
         # not patched ?
         if len(patches):
