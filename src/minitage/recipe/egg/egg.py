@@ -235,8 +235,15 @@ class Recipe(common.MinitageCommonRecipe):
             value = options.get(be_option)
             if value is None:
                 continue
-            self.logger.debug('Using bdist_ext option: %s=%s' % (be_option, value))
+            self.logger.debug('Using bdist_ext option: %s = %s' % (be_option, value))
             build_ext_options[be_option] = value
+
+        bdistext = 'bdistext-'
+        for be_option in [o for o in self.options if o.startswith(bdistext)]:
+            value = options.get(be_option)
+            option = be_option.replace(bdistext, '')
+            self.logger.debug('Using bdist_ext option: %s = %s' % (option, value))
+            build_ext_options[option] = value
         self.build_ext_options = build_ext_options
 
         if not os.path.isdir(self.download_cache):

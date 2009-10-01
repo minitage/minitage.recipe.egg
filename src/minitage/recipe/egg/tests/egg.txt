@@ -153,6 +153,12 @@ BDIST EGGS OPTIONS:
     List of SWIG command line options
 
 
+* bdistext-OPTIONNAME
+
+    will add an entry in the setup.cfg's bdist_egg like:
+
+        OPTIONNAME = foo
+
 Patches
 --------
 
