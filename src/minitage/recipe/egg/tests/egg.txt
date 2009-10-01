@@ -117,43 +117,45 @@ Please look for options at : http://pypi.python.org/pypi/minitage.recipe.common#
 
 BDIST EGGS OPTIONS:
 
-* define
+You can have global and per distributions bdist_ext options.
+
+* (EGGNAME-)define
 
     A comma-separated list of names of C preprocessor variables to define.
 
-* undef
+* (EGGNAME-)undef
 
     A comman separated list of names of C preprocessor variables to undefine.
 
-* link-objects
+* (EGGNAME-)link-objects
 
     The name of an link object to link against. Due to limitations in distutils and desprite the option name, only a single link object can be specified.
 
-* debug
+* (EGGNAME-)debug
 
     Compile/link with debugging information
 
-* force
+* (EGGNAME-)force
 
     Forcibly build everything (ignore file timestamps)
 
-* compiler
+* (EGGNAME-)compiler
 
     Specify the compiler type
 
-* swig
+* (EGGNAME-)swig
 
     The path to the swig executable
-* swig-cpp
+* (EGGNAME-)swig-cpp
 
     Make SWIG create C++ files (default is C)
 
-* swig-opts
+* (EGGNAME-)swig-opts
 
     List of SWIG command line options
 
 
-* bdistext-OPTIONNAME
+* (EGGNAME-)bdistext-OPTIONNAME
 
     will add an entry in the setup.cfg's bdist_egg like:
 

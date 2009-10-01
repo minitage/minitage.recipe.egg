@@ -208,6 +208,25 @@ class Recipe(common.MinitageCommonRecipe):
     Downloads and installs a distutils Python distribution.
     """
 
+    def get_bdist_ext_options(self, distname):
+        build_ext_options = self.build_ext_options.copy()
+        for be_option in ('define', 'undef', 'libraries', 'link-objects',
+                          'debug', 'force', 'compiler', 'swig-cpp', 'swig-opts',
+                          ):
+            value = self.options.get('%s-%s' % (distname, be_option))
+            if value is None:
+                continue
+            self.logger.debug('%s: Using bdist_ext option: %s = %s' % (distname, be_option, value))
+            build_ext_options[be_option] = value
+
+        bdistext = '%s-%s' % (distname, self.bdistext)
+        for be_option in [o for o in self.options if o.startswith(bdistext)]:
+            option = be_option.replace(bdistext, '')
+            value = self.options.get(be_option)
+            self.logger.debug('%s: Using bdist_ext option: %s = %s' % (distname, option, value))
+            build_ext_options[option] = value
+        return  build_ext_options
+
     def __init__(self, buildout, name, options):
         common.MinitageCommonRecipe.__init__(self,
                                     buildout, name, options)
@@ -238,10 +257,10 @@ class Recipe(common.MinitageCommonRecipe):
             self.logger.debug('Using bdist_ext option: %s = %s' % (be_option, value))
             build_ext_options[be_option] = value
 
-        bdistext = 'bdistext-'
-        for be_option in [o for o in self.options if o.startswith(bdistext)]:
+        self.bdistext = 'bdistext-'
+        for be_option in [o for o in self.options if o.startswith(self.bdistext)]:
+            option = be_option.replace(self.bdistext, '')
             value = options.get(be_option)
-            option = be_option.replace(bdistext, '')
             self.logger.debug('Using bdist_ext option: %s = %s' % (option, value))
             build_ext_options[option] = value
         self.build_ext_options = build_ext_options
@@ -1236,11 +1255,12 @@ class Recipe(common.MinitageCommonRecipe):
             if not os.path.exists(setup_cfg):
                 f = open(setup_cfg, 'w')
                 f.close()
-            if self.build_ext_options:
+            beo = self.get_bdist_ext_options(dist.project_name)
+            if beo:
                 repackaged = True
                 setuptools.command.setopt.edit_config(
                     setup_cfg,
-                    dict(build_ext=self.build_ext_options)
+                    dict(build_ext=beo)
                 )
         sub_prefix = self.options.get(
             '%s-build-dir' % ( dist.project_name.lower()),

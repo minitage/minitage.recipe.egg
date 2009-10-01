@@ -54,31 +54,43 @@ Just add the bdist_ext options you want to the buildout
     ... find-links=%(index)s
     ... define=Foo=1,Bar=2
     ... bdistext-foo = bar
+    ... bdistext-bar = titi
+    ... foo-bdistext-foo = tutu
+    ... foo-swig-cpp = toto
     ... eggs=foo
     ... """%{'index': index_url}
     >>> touch('buildout.cfg', data=data)
-    >>> sh('bin/buildout -vvvvv install part')    # doctest: +REPORT_NDIFF
+    >>> sh('bin/buildout -vvvvv install part')
     b...
     minitage.recipe: Using bdist_ext option: define = Foo=1,Bar=2
+    minitage.recipe: Using bdist_ext option: bar = titi
     minitage.recipe: Using bdist_ext option: foo = bar...
+    minitage.recipe: foo: Using bdist_ext option: swig-cpp = toto
+    minitage.recipe: foo: Using bdist_ext option: foo = tutu...
     setup.cfg:
     ---------------
     [egg_info]
-    ...
+    tag_build =
+    tag_date = 0
+    tag_svn_revision = 0
     <BLANKLINE>
     [build_ext]
-    foo = bar
-    define = Foo=1,Bar=2
-    ...
+    foo = tutu
+    bar = titi
+    swig-cpp = toto
+    define = Foo=1,Bar=2...
     setup.cfg:
     ---------------
     [egg_info]
-    ...
+    tag_build =
+    tag_date = 0
+    tag_svn_revision = 0
     <BLANKLINE>
     [build_ext]
-    foo = bar
-    define = Foo=1,Bar=2
-    ...
+    foo = tutu
+    bar = titi
+    swig-cpp = toto
+    define = Foo=1,Bar=2...
     minitage.recipe: All egg dependencies seem to be installed!...
 
 
