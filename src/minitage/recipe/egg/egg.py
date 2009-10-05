@@ -150,6 +150,10 @@ def redo_pyc(egg, executable=sys.executable, environ=os.environ):
 class EggPatchError(Exception):
     """."""
 
+
+
+
+
 def dependency_resolver_decorator(f):
     def callback(self, *args, **kwargs):
         ret = None
@@ -161,28 +165,14 @@ def dependency_resolver_decorator(f):
         except pkg_resources.VersionConflict, e:
             idist, req = e.args
             if self.logger.getEffectiveLevel() <= logging.DEBUG:
-                print
-                print "* Full dependencies mapping:"
-                keys = self.dependency_tree.keys()
-                def asort(a, b):
-                    if a.project_name > b.project_name:
-                        return 1
-                    if a.project_name == b.project_name:
-                        return 0
-                    if a.project_name <  b.project_name:
-                        return -1
-                keys.sort(asort)
-                for key in keys:
-                    print "%s is required by:" % self._constrain_requirement(key)
-                    for i in self.dependency_tree[key]:
-                        dist = self.dependency_tree[key][i]
-                        print "  * %s %s (%s)" % (dist.project_name, dist.version, dist.location)
+                self.print_dependency_tree()
             print
             print '* Eggs depending on %s (requirement):' % req
             for i in self.dependency_tree.get(req, []):
                 dist = self.dependency_tree[req][i]
                 print "    * %s %s (%s)" % (dist.project_name, dist.version, dist.location)
-            print "* Eggs depending on %s (already installed distribution):" % (dist.as_requirement())
+            #print "* Eggs depending on %s (already installed distribution):" % (dist.as_requirement())
+            print "This conflicting installed distribution %s %s is installed in %s." % (idist.project_name, idist.version, idist.location)
             # by project_name
             selector = idist.project_name
             dreqs = self.dependency_tree.get(pkg_resources.Requirement.parse(selector), [])
@@ -193,7 +183,6 @@ def dependency_resolver_decorator(f):
             for i in dreqs:
                 dist = self.dependency_tree[selector][i]
                 print "    * %s %s (%s)" % (dist.project_name, dist.version, dist.location)
-            print "This conflicting installed distribution %s %s is installed in %s." % (idist.project_name, idist.version, idist.location)
             print
             print
             raise e
@@ -207,6 +196,25 @@ class Recipe(common.MinitageCommonRecipe):
     """
     Downloads and installs a distutils Python distribution.
     """
+
+    def print_dependency_tree(self):
+        if self.dependency_tree:
+            print
+            print "* Full dependencies mapping:"
+            keys = self.dependency_tree.keys()
+            def asort(a, b):
+                if a.project_name > b.project_name:
+                    return 1
+                if a.project_name == b.project_name:
+                    return 0
+                if a.project_name <  b.project_name:
+                    return -1
+            keys.sort(asort)
+            for key in keys:
+                print "%s is required by:" % self._constrain_requirement(key)
+                for i in self.dependency_tree[key]:
+                    dist = self.dependency_tree[key][i]
+                    print "  * %s %s (%s)" % (dist.project_name, dist.version, dist.location)
 
     def get_bdist_ext_options(self, distname):
         build_ext_options = self.build_ext_options.copy()
@@ -612,6 +620,7 @@ class Recipe(common.MinitageCommonRecipe):
                     self._pin_version(installed_dist.project_name, installed_dist.version)
                     self.versions[installed_dist.project_name] = installed_dist.version
                     self.add_dist(installed_dist)
+                    # be sure to have the really installed dist requiremen'ts bits
                     self.already_installed_dependencies[installed_dist.project_name] = installed_dist.as_requirement()
         return requirements, working_set
 
@@ -1242,6 +1251,7 @@ class Recipe(common.MinitageCommonRecipe):
         # where we put the builded  eggs
         tmp = os.path.join(self.tmp_directory, 'eggs')
 
+
         if not os.path.isdir(tmp):
             os.makedirs(tmp)
         # maybe extract time
@@ -1450,6 +1460,20 @@ class Recipe(common.MinitageCommonRecipe):
         if not rdist:
             self.scan()
             rdist = self.inst._env.best_match(dist.as_requirement(), working_set)
+        # temporary marking the default requirement as a distribution requirer
+        # if the resulting distribution does not match the initial distribution project_name or version
+        # we will just add it to the dep tree to have it for debug purpose in case of troubles
+        if (rdist.project_name != dist.project_name) or (rdist.version != dist.version):
+            self.logger.debug(
+                'Resulting distribution (%s-%s) does not match the initial source '
+                'distribution identifiers (%s-%s)' % (
+                    rdist.project_name, rdist.version,
+                    dist.project_name, dist.version
+                )
+            )
+            self.feed_dependency_tree([dist.as_requirement()], rdist)
+        # be sure that the installed distribution is not conflicting with its filename.
+        self.already_installed_dependencies[dist.project_name] = self.maybe_get_patched_requirement(rdist)
         self.logger.info("Installed %s %s (%s)." % (rdist.project_name, rdist.version, rdist.location))
         return rdist
 
