@@ -1088,6 +1088,7 @@ class Recipe(common.MinitageCommonRecipe):
                 #    raise
                 # installing extras if required
                 if dist is None:
+                    fdist = None
                     try:
                         # if we come from a patched distribution, i have already
                         # searched the sdist which fits with the requirement.
