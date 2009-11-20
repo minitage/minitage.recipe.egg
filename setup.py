@@ -6,7 +6,7 @@ setupdir = os.path.abspath(
 os.chdir(setupdir)
 
 name='minitage.recipe.egg'
-version = '1.55'
+version = '1.56'
 
 def read(*rnames):
     return open(
@@ -50,7 +50,7 @@ setup(
     zip_safe=False,
     install_requires = [
         'zc.buildout',
-        'setuptools',
+        
         'minitage.core',
         'minitage.recipe.common',
         'iniparse',
