@@ -18,7 +18,7 @@ long_description = (
     + '\n'\
     + read('src', 'minitage', 'recipe', 'egg', 'README.txt')
     + '\n'
-    + read('src', 'minitage', 'recipe', 'egg', 'tests', 'fromurls.txt')
+    + read('src', 'minitage', 'recipe', 'egg', 'tests', 'fromurl.txt')
     + '\n'
     + read('src', 'minitage', 'recipe', 'egg', 'tests', 'conservative.txt')
     + '\n'
