@@ -57,11 +57,12 @@ import zc.buildout.easy_install
 from minitage.recipe.common import common
 from minitage.core.fetchers.interfaces import IFetcherFactory
 from minitage.core import core
-from minitage.core.common import splitstrip, remove_path
+from minitage.core.common import splitstrip, remove_path, letter_re
 
 PATCH_MARKER = 'ZMinitagePatched'
+if sys.platform.startswith('win'):
+    PATCH_MARKER = 'zmpatch'
 orig_versions_re = re.compile('-*%s.*' % PATCH_MARKER, re.U|re.S)
-letter_re = re.compile('^([a-zA-Z]:)', re.U|re.S|re.I)
 
 def get_orig_version(version):
     if not version: version = ''
@@ -74,7 +75,10 @@ def get_requirement_version(requirement):
     operators = ['=', '<', '<']
     for spec in requirement.specs:
         for item in spec:
-            if PATCH_MARKER in item:
+            sitem = '%s' % item
+            if sys.platform.startswith('win'):
+                sitem = sitem.lower()            
+            if PATCH_MARKER in sitem:
                 patched_egg = True
         if len(spec) >= 2:
             if spec[0] == '==':
@@ -799,8 +803,11 @@ class Recipe(common.MinitageCommonRecipe):
         #                        break
 
         if len(patches):
-            if PATCH_MARKER in v:
-                self.inst._versions[requirement.project_name] = v
+            sv = '%s' % v
+            if sys.platform.startswith('win'):
+                sv = sv.lower()
+            if PATCH_MARKER in sv:
+                self.inst._versions[requirement.project_name] = sv
             # forge the patched requirement reporesentation
             # if we cant determine the version from the requirement, it was not
             # already patched, we must have a distribution or an available
@@ -809,10 +816,12 @@ class Recipe(common.MinitageCommonRecipe):
             if not get_orig_version(v):
                 for project in dist, avail:
                     if project:
-                        if PATCH_MARKER in project.version:
-                            v = project.version
+                        sproject_version = project.version
+                        sproject_version = sproject_version.lower()
+                        if PATCH_MARKER in sproject_version:
+                            v = sproject_version
                         else:
-                            v = "%s-%s" % (project.version, patched_bits)
+                            v = "%s-%s" % (sproject_version, patched_bits)
                             break
             requirement = pkg_resources.Requirement.parse(
                 "%s==%s" % (
@@ -1138,7 +1147,7 @@ class Recipe(common.MinitageCommonRecipe):
                     except SystemError, e:
                         raise
                     except Exception, e:
-                        raise
+                        #raise
                         # try to install the same distribution on other links,
                         # eg when the download_url returns 404 or error
                         sdist, sdists = None, self._search_sdists(requirement, working_set)
@@ -1406,15 +1415,24 @@ class Recipe(common.MinitageCommonRecipe):
                 dest,
                 os.path.basename(self.get_dist_location(d))
             )
-            # dont forget to skip zipped erggs, normally we dont have ones, but
+            # dont forget to skip zipped eggs, normally we dont have ones, but
             # in case
+            
+            norm_d_name = d.project_name
+            if sys.platform.startswith('win'):
+                if d.project_name:
+                    norm_d_name = d.project_name.lower()
+            norm_dist_name = dist.project_name
+            if sys.platform.startswith('win'):
+                if dist.project_name:
+                    norm_dist_name = dist.project_name.lower()
             if (
-                (d.project_name == dist.project_name)
+                ( norm_d_name == norm_dist_name)
                 and (patched)
                 and (not os.path.isfile(self.get_dist_location(d)))
                ):
                 # just rename the egg to match the patched name if any
-                #r emove python version pat
+                # and also remove python version bits
                 without_pyver_re = re.compile("(.*)-py\d+.\d+.*$", re.M|re.S)
                 d_egg_name =    without_pyver_re.sub("\\1", d.egg_name())
                 dist_egg_name = without_pyver_re.sub("\\1", dist.egg_name())
@@ -1437,7 +1455,6 @@ class Recipe(common.MinitageCommonRecipe):
                     shutil.rmtree(newloc)
                 else:
                     os.remove(newloc)
-
             try:
                 os.rename(self.get_dist_location(d), newloc)
             except OSError, e:
@@ -1451,7 +1468,10 @@ class Recipe(common.MinitageCommonRecipe):
 
             # regenerate pyc's in this directory
             if os.path.isdir(newloc):
-                redo_pyc(os.path.abspath(newloc), executable = self.executable)
+                try:
+                    redo_pyc(os.path.abspath(newloc), executable = self.executable)
+                except Exception, e:
+                    self.logger.error('Can\'t compile pyc files in %s.' % newloc)
             nd = pkg_resources.Distribution.from_filename(
                 newloc, metadata=pkg_resources.PathMetadata(
                     newloc, os.path.join(newloc, 'EGG-INFO')
@@ -1550,6 +1570,7 @@ class Recipe(common.MinitageCommonRecipe):
                 lenv =  dict(os.environ)
                 if sys.platform.startswith('win'):
                     lenv['SystemRoot'] = os.environ.get('SystemRoot', 'c:\\windows\\')
+                #if 'map' in spec: import pdb;pdb.set_trace()
                 exit_code = subprocess.Popen([self.executable]+list(largs), env = lenv).wait()
                 if exit_code > 0:
                     raise core.MinimergeError('easy install '
@@ -1691,6 +1712,10 @@ class Recipe(common.MinitageCommonRecipe):
         # version slug inside the [versions], just reset the version to None
         if not aversion:
             version = ''
+        # windows breaks the case sensitivity, forcing lower
+        if sys.platform.startswith('win'):
+            version = version.lower()
+            additionnal = additionnal.lower()
         return version, patch_cmd, patch_options, patches, additionnal
 
     def _patch(self, location, dist):

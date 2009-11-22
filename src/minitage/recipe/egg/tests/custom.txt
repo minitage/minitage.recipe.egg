@@ -1,11 +1,5 @@
-===============================================
-Using custom build_ext options
-===============================================
-
-
-
-Initializing test env.
-+++++++++++++++++++++++
+Installing eggs with custom build_ext_options
+++++++++++++++++++++++++++++++++++++++++++++++++
 ::
 
     >>> rmdir(tempdir)
@@ -39,8 +33,6 @@ Initializing test env.
     >>> noecho = [shutil.copy(os.path.join('dist', d), os.path.join('..', d)) for d in os.listdir('dist')]
     >>> cd('..')
 
-Installing eggs with custom build_ext_options
-++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Just add the bdist_ext options you want to the buildout
 
     >>> data = """

@@ -6,7 +6,7 @@ setupdir = os.path.abspath(
 os.chdir(setupdir)
 
 name='minitage.recipe.egg'
-version = '1.56'
+version = '1.57'
 
 def read(*rnames):
     return open(
@@ -16,7 +16,15 @@ def read(*rnames):
 long_description = (
     read('README.txt')
     + '\n'\
-    + read('src', 'minitage', 'recipe', 'egg', 'tests', 'egg.txt')
+    + read('src', 'minitage', 'recipe', 'egg', 'README.txt')
+    + '\n'
+    + read('src', 'minitage', 'recipe', 'egg', 'tests', 'fromurls.txt')
+    + '\n'
+    + read('src', 'minitage', 'recipe', 'egg', 'tests', 'conservative.txt')
+    + '\n'
+    + read('src', 'minitage', 'recipe', 'egg', 'tests', 'patch.txt')
+    + '\n'
+    + read('src', 'minitage', 'recipe', 'egg', 'tests', 'custom.txt')
     + '\n'
     + read('CHANGES.txt')
     + '\n'
@@ -50,7 +58,7 @@ setup(
     zip_safe=False,
     install_requires = [
         'zc.buildout',
-        
+
         'minitage.core',
         'minitage.recipe.common',
         'iniparse',

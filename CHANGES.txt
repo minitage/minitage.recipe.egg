@@ -15,6 +15,7 @@ UP
     - bugfix for compatibility with python2.4 and urlparse(tuple)
     - add bdist_ext options support like zc.recipe.egg:custom
     - make recipe cooler with distribution filename identifiers
+    - split tests in multiple files
 
 1.38
 ------
