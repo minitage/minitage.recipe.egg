@@ -817,7 +817,8 @@ class Recipe(common.MinitageCommonRecipe):
                 for project in dist, avail:
                     if project:
                         sproject_version = project.version
-                        sproject_version = sproject_version.lower()
+                        if sys.platform.startswith('win'):
+                            sproject_version = sproject_version.lower()
                         if PATCH_MARKER in sproject_version:
                             v = sproject_version
                         else:
