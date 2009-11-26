@@ -1253,14 +1253,19 @@ class Recipe(common.MinitageCommonRecipe):
     def maybe_get_patched_requirement(self, dist):
         # mark the distribution as installed
         v, _, _, patches, _ = self._get_dist_patches(dist.project_name, dist.version)
-        r = pkg_resources.Requirement.parse('%s==%s' % (dist.project_name, v))
+        r = pkg_resources.Requirement.parse('%s' % (dist.project_name))
+        if v:
+            r = pkg_resources.Requirement.parse('%s==%s' % (dist.project_name, v))
         if len(patches)>0:
             self.inst._versions[r.project_name] = v
             self.versions[r.project_name] = v
         else:
             # if we did not find patches for this distribution, only constrain
             # it.
-            r = self._constrain_requirement(dist.as_requirement(), fromdist=dist)
+            dist_as_req = r
+            if not v:
+                dist_as_req = r
+            r = self._constrain_requirement(dist_as_req, fromdist=dist)
         return r
 
     def _install_distribution(self, dist, dest, working_set=None):
@@ -1495,7 +1500,7 @@ class Recipe(common.MinitageCommonRecipe):
                                             python=self.executable_version)
 
             rdist = result[0]
-        if not rdist:
+        if (not rdist):
             self.scan()
             rdist = self.inst._env.best_match(dist.as_requirement(), working_set)
         # temporary marking the default requirement as a distribution requirer
@@ -1509,7 +1514,8 @@ class Recipe(common.MinitageCommonRecipe):
                     dist.project_name, dist.version
                 )
             )
-            self.feed_dependency_tree([dist.as_requirement()], rdist)
+        #if not dist.version and rdist.version:
+        #    dist = rdist
         # be sure that the installed distribution is not conflicting with its filename.
         self.already_installed_dependencies[dist.project_name] = self.maybe_get_patched_requirement(rdist)
         self.logger.info("Installed %s %s (%s)." % (rdist.project_name, rdist.version, self.get_dist_location(rdist)))
@@ -1574,7 +1580,6 @@ class Recipe(common.MinitageCommonRecipe):
                 lenv =  dict(os.environ)
                 if sys.platform.startswith('win'):
                     lenv['SystemRoot'] = os.environ.get('SystemRoot', 'c:\\windows\\')
-                #if 'map' in spec: import pdb;pdb.set_trace()
                 exit_code = subprocess.Popen([self.executable]+list(largs), env = lenv).wait()
                 if exit_code > 0:
                     raise core.MinimergeError('easy install '
