@@ -77,7 +77,7 @@ def get_requirement_version(requirement):
         for item in spec:
             sitem = '%s' % item
             if sys.platform.startswith('win'):
-                sitem = sitem.lower()            
+                sitem = sitem.lower()
             if PATCH_MARKER in sitem:
                 patched_egg = True
         if len(spec) >= 2:
@@ -514,6 +514,9 @@ class Recipe(common.MinitageCommonRecipe):
                 _, _, _, directory, _ = common.divide_url(url)
                 if not directory:
                     directory = self.urls.get(url, {}).get('directory', '')
+                if directory:
+                    if not os.path.exists(directory):
+                        directory = ''
                 sdist_files = []
                 try:
                     os.chdir(tmp)
@@ -1418,7 +1421,7 @@ class Recipe(common.MinitageCommonRecipe):
             )
             # dont forget to skip zipped eggs, normally we dont have ones, but
             # in case
-            
+
             norm_d_name = d.project_name
             if sys.platform.startswith('win'):
                 if d.project_name:
