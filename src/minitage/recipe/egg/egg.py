@@ -246,6 +246,7 @@ class Recipe(common.MinitageCommonRecipe):
         return  build_ext_options
 
     def __init__(self, buildout, name, options):
+        self.sav_environ = copy.deepcopy(os.environ)
         common.MinitageCommonRecipe.__init__(self,
                                     buildout, name, options)
         # override recipe default and download into a subdir
@@ -1629,6 +1630,9 @@ class Recipe(common.MinitageCommonRecipe):
             raise zc.buildout.UserError(
                 "Couln't download distribution %s." % avail)
 
+        for key in self.sav_environ:
+            os.environ[key] = self.sav_environ[key]
+
         return dist
 
     def _get_dist_patches(self, name, aversion = None, options=None):
@@ -1757,11 +1761,9 @@ class Recipe(common.MinitageCommonRecipe):
         # use the common nice functions to
         # make our environement convenient to
         # build packages with dependencies
-        if getattr(self, 'unsanitized', True):
-            self._set_path()
-            self._set_pkgconfigpath()
-            self._set_compilation_flags()
-            setattr(self, 'unsanitized', False)
+        self._set_path()
+        self._set_pkgconfigpath()
+        self._set_compilation_flags()
 
     def get_dist_location(self, dist):
         """ Wrapper to get trhe current driver letter on windows."""
