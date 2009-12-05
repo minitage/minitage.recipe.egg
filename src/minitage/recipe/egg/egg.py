@@ -1764,6 +1764,7 @@ class Recipe(common.MinitageCommonRecipe):
         self._set_path()
         self._set_pkgconfigpath()
         self._set_compilation_flags()
+        self.write_env()
 
     def get_dist_location(self, dist):
         """ Wrapper to get trhe current driver letter on windows."""
