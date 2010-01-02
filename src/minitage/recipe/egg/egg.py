@@ -420,7 +420,7 @@ class Recipe(common.MinitageCommonRecipe):
 
 
     def install_distribute(self):
-        self.logger.debug('Installting distribute for the targeted python')
+        self.logger.debug('Installing distribute for the targeted python')
         tfile = tempfile.mkstemp()[1]
         open(tfile, 'w').write(
             BOOTSTRAP_DISTRIBUTE_SCRIPT% {'destination':
