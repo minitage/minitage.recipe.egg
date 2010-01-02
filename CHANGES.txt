@@ -3,8 +3,12 @@ CHANGELOG
 =======================
 
 
+1.63
+-----
 
-UP
+    - better support for distribute, again.
+
+1.62
 -----
 
     - specific dir changepath fixed

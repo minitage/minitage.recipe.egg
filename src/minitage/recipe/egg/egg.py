@@ -395,6 +395,49 @@ class Recipe(common.MinitageCommonRecipe):
         self.scan()
         self.already_installed_dependencies = {}
 
+        # distribute/setuptools support.
+        # add them to sys.path tfor python find them at run time if they
+        # are in the cache and not in the site-packages.
+        self.HAS_DISTRIBUTE = False
+        self.HAS_SETUPTOOLS = False
+        self.has_distribute()
+        if not self.HAS_DISTRIBUTE:
+            self.has_setuptools()
+
+
+    def has_distribute(self):
+        """Check if distribute is present for our targeted python."""
+        if not self.HAS_DISTRIBUTE:
+            try:
+                dist, avail = self.inst._satisfied(
+                    pkg_resources.Requirement.parse('distribute')
+                )
+                if dist:
+                    self.HAS_DISTRIBUTE = True
+                    self.extra_paths.append(dist.location)
+                    self.logger.debug('Using distribute!')
+            except:
+                self.logger.warning('You are using the old setuptools, maybe you '
+                                    'should upgrade to distribute.')
+        return self.HAS_DISTRIBUTE
+
+    def has_setuptools(self):
+        """Check if setuptools is present for our targeted python."""
+        if not self.HAS_SETUPTOOLS:
+            try:
+                dist, avail = self.inst._satisfied(
+                    pkg_resources.Requirement.parse('setuptools')
+                )
+                if dist:
+                    self.HAS_SETUPTOOLS = True
+                    self.extra_paths.append(dist.location)
+                    self.logger.debug('Using setuptools!')
+            except:
+                self.logger.warning('You should either install distribute or'
+                                    ' setuptools inside your python.')
+        return self.HAS_SETUPTOOLS
+
+
     def update(self):
         """update."""
         self.install()

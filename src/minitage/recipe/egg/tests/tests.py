@@ -20,6 +20,8 @@ from zc.buildout.testing import start_server, _start_server, stop_server
 from setuptools.package_index import PackageIndex
 
 
+BOOTSTRAP="http://svn.zope.org/*checkout*/zc.buildout/trunk/bootstrap/bootstrap.py"
+
 def get_uname():
     if 'linux' in sys.platform:
         return 'linux'
@@ -198,7 +200,7 @@ def doc_suite(test_dir, setUp=None, tearDown=None, globs=None):
     # filtering files on extension
     docs = [os.path.join(doctest_dir, doc) for doc in
             os.listdir(doctest_dir)
-            #if doc.endswith('custom.txt')
+            #if doc.endswith('distribute.txt')
            ]
 
     for ftest in docs:
