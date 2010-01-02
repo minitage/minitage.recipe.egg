@@ -34,6 +34,7 @@ import copy
 import distutils
 import os
 import urllib
+import urllib2
 import urlparse
 import shutil
 import sys
@@ -60,6 +61,16 @@ from minitage.core import core
 from minitage.core.common import splitstrip, remove_path, letter_re
 
 PATCH_MARKER = 'ZMinitagePatched'
+BOOTSTRAP = "http://svn.zope.org/*checkout*/zc.buildout/trunk/bootstrap/bootstrap.py"
+
+BOOTSTRAP_DISTRIBUTE_SCRIPT = """
+import urllib2
+ez = {}
+exec urllib2.urlopen('http://python-distribute.org/distribute_setup.py'
+                ).read() in ez
+ez['use_setuptools'](to_dir='%(destination)s', download_delay=0, no_fake=True) 
+"""
+
 if sys.platform.startswith('win'):
     PATCH_MARKER = 'zmpatch'
 orig_versions_re = re.compile('-*%s.*' % PATCH_MARKER, re.U|re.S)
@@ -313,6 +324,7 @@ class Recipe(common.MinitageCommonRecipe):
         # end compat
 
         # caches
+        self.eggs_directory = buildout['buildout']['eggs-directory']
         self.eggs_caches = [
             buildout['buildout']['develop-eggs-directory'],
             buildout['buildout']['eggs-directory'],
@@ -403,12 +415,27 @@ class Recipe(common.MinitageCommonRecipe):
         self.has_distribute()
         if not self.HAS_DISTRIBUTE:
             self.has_setuptools()
+        if not self.HAS_DISTRIBUTE and not self.HAS_SETUPTOOLS:
+            self.install_distribute()
 
+
+    def install_distribute(self):
+        self.logger.debug('Installting distribute for the targeted python')
+        tfile = tempfile.mkstemp()[1]
+        open(tfile, 'w').write(
+            BOOTSTRAP_DISTRIBUTE_SCRIPT% {'destination':
+                                          self.eggs_directory}
+        )
+        ret = subprocess.Popen([self.executable, tfile]).wait()
+        if not ret == 0:
+            raise Exception('Cannot install distribute!')
+        self.has_distribute()
 
     def has_distribute(self):
         """Check if distribute is present for our targeted python."""
         if not self.HAS_DISTRIBUTE:
             try:
+                self.scan()
                 dist, avail = self.inst._satisfied(
                     pkg_resources.Requirement.parse('distribute')
                 )

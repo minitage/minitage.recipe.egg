@@ -18,6 +18,7 @@ from zc.buildout.buildout import Buildout
 from zc.buildout import buildout as bo
 from zc.buildout.testing import start_server, _start_server, stop_server
 from setuptools.package_index import PackageIndex
+from minitage.core.common import remove_path, which
 
 
 BOOTSTRAP="http://svn.zope.org/*checkout*/zc.buildout/trunk/bootstrap/bootstrap.py"
@@ -200,7 +201,7 @@ def doc_suite(test_dir, setUp=None, tearDown=None, globs=None):
     # filtering files on extension
     docs = [os.path.join(doctest_dir, doc) for doc in
             os.listdir(doctest_dir)
-            #if doc.endswith('distribute.txt')
+            #if doc.endswith('special_distribute.txt')
            ]
 
     for ftest in docs:
