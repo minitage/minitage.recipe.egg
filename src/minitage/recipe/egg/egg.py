@@ -181,6 +181,7 @@ def dependency_resolver_decorator(f):
         #    print e.args[2]
         #    raise e
         except pkg_resources.VersionConflict, e:
+            import pdb;pdb.set_trace()  ## Breakpoint ##
             idist, req = e.args
             if self.logger.getEffectiveLevel() <= logging.DEBUG:
                 self.print_dependency_tree()
@@ -422,11 +423,14 @@ class Recipe(common.MinitageCommonRecipe):
     def install_distribute(self):
         self.logger.debug('Installing distribute for the targeted python')
         tfile = tempfile.mkstemp()[1]
+        ppath = os.environ.get('PYTHONPATH', '')
+        os.environ['PYTHONPATH'] = ''
         open(tfile, 'w').write(
             BOOTSTRAP_DISTRIBUTE_SCRIPT% {'destination':
                                           self.eggs_directory}
         )
         ret = subprocess.Popen([self.executable, tfile]).wait()
+        os.environ['PYTHONPATH'] = ppath
         if not ret == 0:
             raise Exception('Cannot install distribute!')
         self.has_distribute()
@@ -1031,12 +1035,17 @@ class Recipe(common.MinitageCommonRecipe):
             try:
                 constrained_req = self.inst._constrain(requirement)
             except zc.buildout.easy_install.IncompatibleVersionError, e:
+               #import pdb;pdb.set_trace()  ## Breakpoint ##
                if fromdist:
-                   msg = 'Fixed version "%s" is not consistent with the requirement "%s".\n%s' % (
+                   msg = '\n\n'
+                   msg += '-' * 80 + '\n'
+                   msg += 'Buildout fixed version "%s==%s" is not consistent with the requirement "%s".\n%s' % (
+                       requirement.project_name,
                        e.args[1],
                        requirement,
-                       'Required by %s-%s (%s)' % (fromdist.project_name, fromdist.version, self.get_dist_location(fromdist))
+                       'Required by %s-%s (%s)\n' % (fromdist.project_name, fromdist.version, self.get_dist_location(fromdist))
                    )
+                   msg += '-' * 80 + '\n'
                    raise IncompatibleVersionError('Bad Version', e.args[1], msg)
                else:
                     raise e
