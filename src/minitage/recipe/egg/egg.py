@@ -68,7 +68,7 @@ import urllib2
 ez = {}
 exec urllib2.urlopen('http://python-distribute.org/distribute_setup.py'
                 ).read() in ez
-ez['use_setuptools'](to_dir='%(destination)s', download_delay=0, no_fake=True) 
+ez['use_setuptools'](to_dir='%(destination)s', download_delay=0, no_fake=True)
 """
 
 if sys.platform.startswith('win'):
@@ -346,6 +346,7 @@ class Recipe(common.MinitageCommonRecipe):
         if not self.eggs:
             eggs = [name]
         # findlinks for eggs
+        self.install_previous_version = self.options.get('install-previous-version', '')
         self.find_links = splitstrip(self.options.get('find-links', ''))
         self.find_links += splitstrip(self.buildout['buildout'].get('find-links', ''))
 
@@ -1233,7 +1234,13 @@ class Recipe(common.MinitageCommonRecipe):
                         #raise
                         # try to install the same distribution on other links,
                         # eg when the download_url returns 404 or error
-                        sdist, sdists = None, self._search_sdists(requirement, working_set)
+                        # force to install at same version
+                        freq = pkg_resources.Requirement.parse(
+                            '%s==%s' % (fdist.project_name, fdist.version)
+                        )
+                        if self.install_previous_version:
+                            freq = requirement
+                        sdist, sdists = None, self._search_sdists(freq, working_set)
                         while sdists:
                             try:
                                 sdist = sdists.pop(0)

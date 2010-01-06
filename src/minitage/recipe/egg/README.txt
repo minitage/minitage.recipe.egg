@@ -74,6 +74,8 @@ Please look for options at : http://pypi.python.org/pypi/minitage.recipe.common#
     It defaults to buildout's one
 * index
     Custom eggs index (not pypi/simple). It defaults to buildout's one
+* install-previous-version
+    install previous version of an egg (recursivly on errors)
 * find-links
     additionnal links vhere we can find eggs. It defaults to buildout's one
 * extra-paths
