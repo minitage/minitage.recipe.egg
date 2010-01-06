@@ -181,7 +181,6 @@ def dependency_resolver_decorator(f):
         #    print e.args[2]
         #    raise e
         except pkg_resources.VersionConflict, e:
-            import pdb;pdb.set_trace()  ## Breakpoint ##
             idist, req = e.args
             if self.logger.getEffectiveLevel() <= logging.DEBUG:
                 self.print_dependency_tree()
