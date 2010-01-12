@@ -1183,8 +1183,21 @@ class Recipe(common.MinitageCommonRecipe):
                     continue
                 #try:
                 dist, avail, maybe_patched_requirement = self._satisfied(requirement, working_set)
+
                 #except Exception, e:
                 #    raise
+
+                # switch setuptools to distribute if any
+                if (avail is not None) and self.HAS_DISTRIBUTE:
+                    if avail.project_name == 'setuptools':
+                        distribute = self._constrain_requirement(
+                            pkg_resources.Requirement.parse('distribute')
+                        )
+                        try:
+                            dist, avail = self.inst._satisfied(distribute)
+                        except:
+                            pass
+
                 # installing extras if required
                 if dist is None:
                     fdist = None
