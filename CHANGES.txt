@@ -3,6 +3,11 @@ CHANGELOG
 =======================
 
 
+1.72
+------
+
+    - fix to avoid conflicterror when you fix versions in buildout.cfg and somerone fix another in setup.py, it just display a big warning
+
 1.71
 -----
 

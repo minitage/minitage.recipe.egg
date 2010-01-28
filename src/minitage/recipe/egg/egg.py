@@ -1014,11 +1014,11 @@ class Recipe(common.MinitageCommonRecipe):
                 config.set(versions_part, requirement.project_name, version)
                 backup_base = os.path.join(self.buildout._buildout_dir,
                                       '%s.before.fixed_version.bak' % fconfig)
-                index = 0
+                #index = 0
                 backup = backup_base
-                while os.path.exists(backup):
-                    index += 1
-                    backup = '%s.%s' % (backup_base, index)
+                #while os.path.exists(backup):
+                #    index += 1
+                #    backup = '%s.%s' % (backup_base, index)
                 self.logger.debug('CREATING buildout backup in %s' % backup)
                 shutil.copy2(cfg, backup)
                 config.write(open(cfg, 'w'))
@@ -1039,6 +1039,7 @@ class Recipe(common.MinitageCommonRecipe):
                if fromdist:
                    msg = '\n\n'
                    msg += '-' * 80 + '\n'
+                   msg += '!!! Installing buildout fixed version even if packagers pin something else in their setup.py by hand !!!\n'
                    msg += 'Buildout fixed version "%s==%s" is not consistent with the requirement "%s".\n%s' % (
                        requirement.project_name,
                        e.args[1],
@@ -1046,9 +1047,25 @@ class Recipe(common.MinitageCommonRecipe):
                        'Required by %s-%s (%s)\n' % (fromdist.project_name, fromdist.version, self.get_dist_location(fromdist))
                    )
                    msg += '-' * 80 + '\n'
-                   raise IncompatibleVersionError('Bad Version', e.args[1], msg)
+                   if not msg in self.lastlogs:
+                       self.lastlogs.append(msg)
+                   constrained_req = self.inst._constrain(pkg_resources.Requirement.parse(requirement.project_name))
+               elif requirement.project_name in self.versions:
+                       msg = '\n\n'
+                       msg += '-' * 80 + '\n'
+                       msg += '!!! Installing buildout fixed version even if packagers pin something else in their setup.py by hand !!!\n'
+                       msg += 'Buildout fixed version "%s==%s" is not consistent with the requirement "%s".\n' % (
+                           requirement.project_name,
+                           e.args[1],
+                           requirement,
+                       )
+                       msg += '-' * 80 + '\n'
+                       if not msg in self.lastlogs: 
+                           self.lastlogs.append(msg)
+                       constrained_req = self.inst._constrain(pkg_resources.Requirement.parse(requirement.project_name))
                else:
-                    raise e
+                   import pdb;pdb.set_trace()  ## Breakpoint ##
+                   raise e
             r = constrained_requirements.get(requirement.project_name,
                                              constrained_req)
             # constrain doesnt conserve extras :::
