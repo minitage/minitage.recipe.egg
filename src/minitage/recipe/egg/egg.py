@@ -1035,7 +1035,6 @@ class Recipe(common.MinitageCommonRecipe):
             try:
                 constrained_req = self.inst._constrain(requirement)
             except zc.buildout.easy_install.IncompatibleVersionError, e:
-               #import pdb;pdb.set_trace()  ## Breakpoint ##
                if fromdist:
                    msg = '\n\n'
                    msg += '-' * 80 + '\n'
@@ -1064,7 +1063,6 @@ class Recipe(common.MinitageCommonRecipe):
                            self.lastlogs.append(msg)
                        constrained_req = self.inst._constrain(pkg_resources.Requirement.parse(requirement.project_name))
                else:
-                   import pdb;pdb.set_trace()  ## Breakpoint ##
                    raise e
             r = constrained_requirements.get(requirement.project_name,
                                              constrained_req)
