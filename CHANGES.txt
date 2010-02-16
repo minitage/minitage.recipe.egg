@@ -3,8 +3,8 @@ CHANGELOG
 =======================
 
 
-1.73
-------
+1.73 - 1.74:
+--------------
 
     - Fix for cross platform builds
       It allows lot of things on OSX
