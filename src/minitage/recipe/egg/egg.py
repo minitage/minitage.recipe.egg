@@ -382,6 +382,34 @@ class Recipe(common.MinitageCommonRecipe):
             self.buildout['buildout']['allow-hosts'] = 'None'
             self.buildout._allow_hosts = ('None',)
 
+
+        # on darwin, you can easily have a supported platform different from
+        # the one you ran buildout with
+        # example -> macosx-flat -> macosx-i386
+        # to avoid mismatch and recusions bugs, we will test both
+        # we also need in this case to patch tthe Installer object for its
+        # environment to know the targeted envionment
+        self.executable_platform = None
+        if self.uname == 'darwin':
+            osx_platform = pkg_resources.get_supported_platform()
+            sget_supported_patform = '%s' % (
+                'from pkg_resources import get_supported_platform;'
+                'print get_supported_platform()'
+            )
+            self._set_compilation_flags()
+            env = copy.deepcopy(os.environ)
+            p = subprocess.Popen(
+                [self.executable, '-c',
+                 sget_supported_patform],
+                env = env,
+                stdout = subprocess.PIPE,
+                stdin = subprocess.PIPE,
+            )
+            p.wait()
+            sp = p.stdout.read().replace('\n', '')
+            if sp != osx_platform:
+                self.executable_platform = sp
+
         zc.buildout.easy_install.Installer._download_cache = self.download_cache
         zc.buildout.easy_install.Installer._always_unzip = True
         self.inst = zc.buildout.easy_install.Installer(
@@ -393,11 +421,13 @@ class Recipe(common.MinitageCommonRecipe):
             versions=self.buildout.get('versions', {}),
             path=self.eggs_caches,
             newest = self.buildout.newest,
-
             allow_hosts=self.options.get('allow-hosts',
                                          self.buildout.get('allow-hosts', {})
                                          ),
         )
+
+        self.platform_scan()
+
         # FORCING NEWEST MODE !!! see Installer code...
         self.inst._newest = self.buildout.newest
         self._dest= os.path.abspath(
@@ -419,6 +449,19 @@ class Recipe(common.MinitageCommonRecipe):
         if not self.HAS_DISTRIBUTE and not self.HAS_SETUPTOOLS:
             self.install_distribute()
 
+    def platform_scan(self):
+        """Atm, its only used on mac,
+        if the targeted python platform is different from the buildout running
+        process, we will take that into account and reload the Environements
+        according to those values
+        """
+        if self.executable_platform:
+            # reset the platform according to the targeted python
+            self.inst._env.platform = self.executable_platform
+            self.inst._index.platform = self.executable_platform
+            # redo a proper distributions scan
+            self.inst._env.scan(self.eggs_caches)
+            self.inst._index.scan(self.eggs_caches)
 
     def install_distribute(self):
         self.logger.debug('Installing distribute for the targeted python')
@@ -717,11 +760,37 @@ class Recipe(common.MinitageCommonRecipe):
             scanpaths = self.eggs_caches
         self.inst._env.scan(scanpaths)
 
+
+    def make_env(self, search_path=None, platform=None, python=None):
+        """Make a pkg_resources Environment instance while
+        honnouring the following attributes
+
+            - self.executable_platform
+            - self.executable_version
+
+        """
+        args = []
+        kwargs = {}
+        args.append(search_path)
+        if platform:
+            kwargs['platform'] = platform
+        elif self.executable_platform:
+            # honour self.executable_platform if any
+            kwargs['platform'] = self.executable_platform
+
+        if python:
+            kwargs['python'] = python
+        elif self.executable_version:
+            # honour self.executable_version if any
+            kwargs['python'] = self.executable_version
+        env = pkg_resources.Environment(
+            *args, **kwargs
+        )
+        return env
+
     def _search_sdists(self, requirement, working_set, multiple=True):
         sreq = '%s' % requirement
-        env = pkg_resources.Environment(
-            [self.download_cache],
-            python=self.executable_version)
+        env = self.make_env([self.download_cache])
         avail, sdists = None, []
         dist = None
         results = []
@@ -1059,7 +1128,7 @@ class Recipe(common.MinitageCommonRecipe):
                            requirement,
                        )
                        msg += '-' * 80 + '\n'
-                       if not msg in self.lastlogs: 
+                       if not msg in self.lastlogs:
                            self.lastlogs.append(msg)
                        constrained_req = self.inst._constrain(pkg_resources.Requirement.parse(requirement.project_name))
                else:
@@ -1498,10 +1567,7 @@ class Recipe(common.MinitageCommonRecipe):
         if os.path.exists(ttar):
             os.remove(ttar)
         dists = []
-        env = pkg_resources.Environment(
-            [tmp],
-            python=self.executable_version)
-
+        env = self.make_env([tmp])
         for project in env:
             dists.extend(env[project])
 
@@ -1610,9 +1676,7 @@ class Recipe(common.MinitageCommonRecipe):
             self.eggs_caches += [dest]
         rdist = None
         if result:
-            renv = pkg_resources.Environment([dest],
-                                            python=self.executable_version)
-
+            renv = self.make_env([dest])
             rdist = result[0]
         if (not rdist):
             self.scan()

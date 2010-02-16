@@ -3,6 +3,15 @@ CHANGELOG
 =======================
 
 
+1.73
+------
+
+    - Fix for cross platform builds
+      It allows lot of things on OSX
+
+            (mostly run buildout with a flat compiled python
+             and use a targeted python compiled for i386)
+
 1.72
 ------
 
