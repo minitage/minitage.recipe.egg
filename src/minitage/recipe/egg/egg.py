@@ -80,6 +80,7 @@ def get_orig_version(version):
     return orig_versions_re.sub('', version)
 
 class IncompatibleVersionError(zc.buildout.easy_install.IncompatibleVersionError): pass
+class DistributionDownloadError(Exception): pass
 
 def get_requirement_version(requirement):
     patched_egg, version= False, None
@@ -566,6 +567,7 @@ class Recipe(common.MinitageCommonRecipe):
                 self.eggs + extras,
                 dest,
                 working_set=working_set)
+
             requirements.extend(drequirements)
         # cleaning stuff
         if os.path.isdir(self.tmp_directory):
@@ -1295,6 +1297,10 @@ class Recipe(common.MinitageCommonRecipe):
                         fdist = self._get_dist(avail, working_set, force_location=force_location)
                     except Exception, e:
                         # try to find the same distribution on other links,
+                        if avail:
+                            requirement = pkg_resources.Requirement.parse(
+                                '%s==%s'%(avail.project_name, avail.version)
+                            )
                         # eg when the download_url returns 404 or error
                         sdist, sdists = None, self._search_sdists(requirement, working_set)
                         while sdists:
@@ -1315,12 +1321,23 @@ class Recipe(common.MinitageCommonRecipe):
                                         )
                                     )
                                     #self.lastlogs.append('Additional error was : %s' % e)
-                                except:
-                                    pass
+                                except Exception, e:
+                                    self.logger.error(
+                                        '%s can\'t be downloaded'
+                                        ' from %s.'%(sdist,
+                                                     sdist.location))
+                                    self.logger.error('Encountered Exception:'
+                                                      ' %s: %s'%(e.__class__,e))
+
                                 if fdist:
                                     break
-                        if not fdist:
-                            raise
+                    if not fdist:
+                        raise DistributionDownloadError(
+                            'A distribution'
+                            ' matching \'%s\' can\'t be'
+                            ' downloaded.' %
+                            (requirement)
+                        )
                     try:
                         dist = self._install_distribution(fdist, dest, working_set)
                     except EggPatchError, e:
@@ -1331,7 +1348,6 @@ class Recipe(common.MinitageCommonRecipe):
                         #raise
                         # try to install the same distribution on other links,
                         # eg when the download_url returns 404 or error
-                        # force to install at same version
                         freq = pkg_resources.Requirement.parse(
                             '%s==%s' % (fdist.project_name, fdist.version)
                         )
