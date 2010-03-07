@@ -169,9 +169,14 @@ def redo_pyc(egg, executable=sys.executable, environ=os.environ):
 class EggPatchError(Exception):
     """."""
 
+class EasyInstallError(core.MinimergeError):
 
-
-
+    def __init__(self, *args, **kwargs):
+        core.MinimergeError(self, *args)
+        self.failed_dist = kwargs.get('dist', None)
+        self.failed_specs = kwargs.get('specs', None)
+        self.failed_working_set = kwargs.get('working_set', None)
+        self.failed_prefix = kwargs.get('prefix', None)
 
 def dependency_resolver_decorator(f):
     def callback(self, *args, **kwargs):
@@ -208,16 +213,67 @@ def dependency_resolver_decorator(f):
             print
             print
             raise e
+        except EasyInstallError, e:
+            dist = e.failed_dist
+            specs = e.failed_specs
+            if dist:
+                print "Easy_install failed on some distribution:"
+                if dist:
+                    print "    - Failed dist: %s" %  dist.as_requirement()
+            if len(specs) == 1:
+                fd = get_first_dist(specs[0])
+                if fd:
+                    # print up to level6 dependencies
+                    req = fd.as_requirement()
+                    print "    - Failed specs: %s" %  fd.as_requirement()
+                    reqs = self.print_requirement_for(req)
+                    for r in reqs:
+                        rreqs = self.print_requirement_for(r)
+                        for rr in rreqs:
+                            rrreqs = self.print_requirement_for(rr)
+                            for rrr in rrreqs:
+                                rrrreqs = self.print_requirement_for(rrr)
+                                for rrrr in rrrreqs:
+                                    rrrrreqs = self.print_requirement_for(rrrr)
+                                    for rrrrr in rrrrreqs:
+                                        rrrrreqs = self.print_requirement_for(rrrrr)
+            raise e
         except Exception, e:
             self.logger.error(traceback.format_exc())
             raise e
         return ret
     return callback
 
+
+
 class Recipe(common.MinitageCommonRecipe):
     """
     Downloads and installs a distutils Python distribution.
     """
+
+    def print_requirement_for(self, req):
+        reqs, rreqs = {}, []
+        # not versionnned requirement
+        altreq = pkg_resources.Requirement.parse(req.project_name)
+        try:
+            reqs = self.dependency_tree[req]
+        except:
+            try:
+                reqs = self.dependency_tree[altreq]
+            except:
+                pass
+
+        if isinstance(reqs, dict):
+            reqs = reqs.values()
+        for r in reqs:
+            if isinstance(r, pkg_resources.Distribution):
+                rreqs.append(r.as_requirement())
+            else:
+                rreqs.append(r)
+        if rreqs:
+            print "    - required by: "
+            print "        - %s" % rreqs
+        return rreqs
 
     def print_dependency_tree(self):
         if self.dependency_tree:
@@ -1779,9 +1835,14 @@ class Recipe(common.MinitageCommonRecipe):
                     raise core.MinimergeError('easy install '
                                               'failed !')
             except Exception, e:
-                raise core.MinimergeError(
+                raise EasyInstallError(
                     'PythonPackage via easy_install '
-                    'Install failed !\n%s' % e
+                    'Install failed !\n%s' % e,
+                    **{'specs': specs,
+                       'dist': dist,
+                       'working_set': working_set,
+                       'prefix': prefix,
+                      }
                 )
 
         os.chdir(cwd)
@@ -1972,5 +2033,7 @@ class Recipe(common.MinitageCommonRecipe):
                 dist.location = os.path.normpath(dist.location)
 
         return dist.location
+
+
 
 # vim:set et sts=4 ts=4 tw=80:
