@@ -47,6 +47,7 @@ Let's create a buildout configuration file and a basic egg not published on pypi
     ... [versions]
     ... foo=1.0
     ... [buildout]
+    ... eggs-directory =${buildout:directory}/eggs
     ... download-cache=${buildout:directory}
     ... parts =
     ...     part
@@ -76,6 +77,7 @@ We ll use it to check the already present distribution files in the cache.
     ... [versions]
     ... mr.developer=0.15
     ... [buildout]
+    ... eggs-directory =${buildout:directory}/eggs
     ... versions = versions
     ... download-cache=${buildout:directory}
     ... parts =
@@ -105,6 +107,7 @@ We ll use it to check the already present distribution files in the cache.
 As we are installing from an url, we must pin the version to be sure to use this egg,
 even if we have some other similar egg on index or find-links.
 See the versions pinned to use your downloaded stuff
+::
 
     >>> cat('buildout.cfg')
     <BLANKLINE>
@@ -113,6 +116,7 @@ See the versions pinned to use your downloaded stuff
     minitage.core = 1.0.4
     minitage.paste = 1.1
     [buildout]
+    eggs-directory =${buildout:directory}/eggs
     versions = versions
     download-cache=${buildout:directory}
     parts =
@@ -134,6 +138,7 @@ If we try to install a newer version, via an url, it will work, even if the vers
     ... [buildout]
     ... versions = versions
     ... download-cache=${buildout:directory}
+    ... eggs-directory =${buildout:directory}/eggs
     ... parts =
     ...     part
     ... [part]

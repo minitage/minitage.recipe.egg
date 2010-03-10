@@ -47,6 +47,7 @@ Let's create a buildout configuration file and a basic egg not published on pypi
     ... [versions]
     ... foo=1.0
     ... [buildout]
+    ... eggs-directory =${buildout:directory}/eggs
     ... download-cache=${buildout:directory}
     ... parts =
     ...     part
@@ -68,12 +69,13 @@ Let's create a buildout configuration file and a basic egg not published on pypi
 
 Well, now, we are 1.0.
 Removing the version bit, but choosing to be non newest will make
-buildout not to install the new foo-2.0 version.
+buildout not to install the new foo-2.0 version.::
 
     >>> data = """\
     ... [versions]
     ... [buildout]
     ... download-cache=${buildout:directory}
+    ... eggs-directory =${buildout:directory}/eggs
     ... parts =
     ...     part
     ... versions = versions
@@ -89,25 +91,26 @@ buildout not to install the new foo-2.0 version.
     minitage.recipe: Picked: foo = 1.0
     minitage.recipe: All egg dependencies seem to be installed!...
 
-Idem in offline mode.
+Idem in offline mode.::
 
     >>> sh('bin/buildout -ovvvvv install t')
     b...
     minitage.recipe: Picked: foo = 1.0
     minitage.recipe: All egg dependencies seem to be installed!...
 
-But then, going online/newest will trigger the installation of the 2.0 egg.
+But then, going online/newest will trigger the installation of the 2.0 egg.::
 
     >>> sh('bin/buildout -nvvvvv install t')
     b...
     minitage.recipe: Picked: foo = 2.0
     minitage.recipe: All egg dependencies seem to be installed!...
 
-File urls work in offline mode.
+File urls work in offline mode.::
 
     >>> data = """
     ... [buildout]
     ... download-cache=${buildout:directory}
+    ... eggs-directory =${buildout:directory}/eggs
     ... parts =
     ...     part
     ... [part]
@@ -121,6 +124,7 @@ File urls work in offline mode.
     <BLANKLINE>
     [buildout]
     download-cache=${buildout:directory}
+    eggs-directory =${buildout:directory}/eggs
     parts =
         part
     versions = versions

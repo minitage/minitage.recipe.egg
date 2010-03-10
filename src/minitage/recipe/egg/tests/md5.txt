@@ -16,7 +16,7 @@ Let's create a buildout installation::
     buildout -o bootstrap...
 
 Pypi has the habit to append an md5 fragment to its egg urls,
-we ll use it to check the already present distribution files in the cache.
+we ll use it to check the already present distribution files in the cache.::
 
     >>> dlcache = os.path.join('minitage', 'eggs')
     >>> data = """
@@ -24,6 +24,7 @@ we ll use it to check the already present distribution files in the cache.
     ... mr.developer = 0.15
     ... [buildout]
     ... versions = versions
+    ... eggs-directory =${buildout:directory}/eggs
     ... download-cache=${buildout:directory}
     ... parts =
     ...     part
@@ -38,15 +39,15 @@ we ll use it to check the already present distribution files in the cache.
     >>> egg
     'mr.developer-....zip'
 
-Resetting the file contents.
+Resetting the file contents.::
 
     >>> touch(os.path.join(dlcache, egg), data='')
 
-Deleting the installed egg.
+Deleting the installed egg.::
 
     >>> noecho = [(egg, remove(os.path.join('eggs', egg))) for egg in os.listdir('eggs') if 'developer' in egg]
 
-Trying to reinstall.
+Trying to reinstall.::
 
     >>> sh('bin/buildout -vvvvv install part')
     b...
@@ -56,4 +57,4 @@ Trying to reinstall.
     A bakcup will be made in /tmp/buildout.test/minitage/eggs/mr.developer-0.15.zip.md5sum_mismatch.0.
     minitage.recipe: Cache download http://pypi.python.org/packages/source/m/mr.developer/mr.developer-0.15.zip#md5=796babbb65820f6c052141cae1fb3e8d as /tmp/buildout.test/minitage/eggs
     minitage.recipe: Downloading http://pypi.python.org/packages/source/m/mr.developer/mr.developer-0.15.zip#md5=796babbb65820f6c052141cae1fb3e8d in /tmp/buildout.test/minitage/eggs/mr.developer-0.15.zip...
- 
+

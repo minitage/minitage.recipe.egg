@@ -6,17 +6,20 @@ Installing virtualenv
     >>> rmdir(tempdir)
     >>> mkdir(tempdir)
     >>> cd(tempdir)
-    >>> a = [mkdir(d) for d in ('eggs', 'develop-eggs', 'bin', 'src')]
+    >>> a = [mkdir(d) for d in ('eggs', 'develop-eggs', 'bin', 'src', 'd')]
     >>> install_develop_eggs(['minitage.recipe.egg'])
     >>> install_eggs_from_pathes(['zc.buildout'], sys.path)
     >>> touch('buildout.cfg')
+    >>> SBOOTSTRAP = 'http://svn.zope.org/*checkout*/zc.buildout/trunk/bootstrap/bootstrap.py?rev=101222'
     >>> open('bootstrap.py', 'w').write(urllib2.urlopen(BOOTSTRAP).read())
-    >>> sh('%s bootstrap.py -d' % sys.executable)
+    >>> open('sbootstrap.py', 'w').write(urllib2.urlopen(SBOOTSTRAP).read())
+    >>> sh('%s sbootstrap.py' % sys.executable)
     /...
     >>> data = """
     ... [buildout]
     ... versions = versions
-    ... download-cache=${buildout:directory}
+    ... eggs-directory =${buildout:directory}/eggs
+    ... download-cache=${buildout:directory}/d
     ... parts = part
     ...         s
     ... [part]
@@ -30,8 +33,8 @@ Installing virtualenv
     ... zc.buildout = 1.3.0
     ... """
     >>> touch('buildout.cfg', data=data)
-    >>> sh('bin/buildout -vvvvvv install part s')
-    bin/buildout...
+    >>> sh('bin/buildout -Uvvvvvv install part s')
+    b...
 
 A little boilerplate to make 2 nudes environments
 
@@ -43,23 +46,30 @@ A little boilerplate to make 2 nudes environments
     >>> n = [[remove_path(os.path.join(sp, p)) for p in os.listdir(sp)
     ...  if ('easy_install' in p)
     ...  or ('setuptools' in p)
+    ...  or ('pip' in p)
+    ...  or ('easy-install.pth' in p)
     ...  or ('distribute' in p)]
     ...  for sp in psps]
+    >>> [os.listdir(sp) for sp in psps]
+    [[], []]
 
 
-Installing with a python and installing with another, where in the other we don't have any setupptoos/distribute is a special case.
+Installing with a python and installing with another, where in the other we don't have any setuptools/distribute is a special case.
 We need to install & activate distribute for the other python installation.
 
+    >>> sh('rm -rf eggs/zc.buildout* eggs/distribute* eggs/setuptools* setuptools* distribute* d/*')
+    rm -rf...
     >>> sh('venv1/bin/python bootstrap.py')
     venv1/bin/python bootstrap.py
     Downloading ...setuptools...
     Generated script '/tmp/buildout.test/bin/buildout'...
-    >>> os.listdir('eggs')
-    ['zc.buildout...', 'setuptools...']
+    >>> ret = os.listdir('eggs');ret.sort();ret
+    ['minitage.recipe.scripts...', 'setuptools...', 'virtualenv...', 'zc.buildout...']
     >>> data = """
     ... [buildout]
     ... versions = versions
-    ... download-cache=${buildout:directory}
+    ... download-cache=${buildout:directory}/d
+    ... eggs-directory =${buildout:directory}/eggs
     ... parts = part
     ... [part]
     ... recipe=minitage.recipe.egg
@@ -69,11 +79,11 @@ We need to install & activate distribute for the other python installation.
     ... zc.buildout = 1.3.0
     ... """
     >>> touch('buildout.cfg', data=data)
-    >>> sh('bin/buildout -vvvvvv install part')
+    >>> sh('bin/buildout -Uvvvvvv install part')
     b...
     minitage.recipe: We have no distributions for distribute that satisfies 'distribute'.
     minitage.recipe: We have no distributions for setuptools that satisfies 'setuptools'.
     minitage.recipe: Installing distribute for the targeted python...
-    /tmp/buildout.test/eggs/distribute-0.6.10-py2.4.egg...
+    /tmp/buildout.test/eggs/distribute-...-py...egg...
     minitage.recipe: Using distribute!...
 

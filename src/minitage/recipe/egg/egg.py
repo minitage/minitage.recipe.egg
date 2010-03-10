@@ -1307,6 +1307,17 @@ class Recipe(common.MinitageCommonRecipe):
             working_set = working_set
 
         requirements = self.filter_already_installed_requirents(reqs)
+        if self.HAS_DISTRIBUTE:
+            distribute_req = self._constrain_requirement(
+                pkg_resources.Requirement.parse('distribute')
+            )
+            for i, r in enumerate(requirements[:]):
+                if r.project_name == 'setuptools':
+                    self.logger.warning(
+                        'Replaced setuptools requirment by %s.' % distribute_req
+                    )
+                    requirements[i] = distribute_req
+
         # Maybe an existing dist is already the best dist that satisfies the
         # requirement
         if requirements:

@@ -63,6 +63,7 @@ Patching is easy, just put your patches in YouEgg-patches.
     ... foo=1.0
     ... [buildout]
     ... download-cache=${buildout:directory}
+    ... eggs-directory =${buildout:directory}/eggs
     ... parts =
     ...     part
     ... [part]
@@ -95,6 +96,7 @@ Oups, the patch level ! .
     ... foo=1.0
     ... [buildout]
     ... download-cache=${buildout:directory}
+    ... eggs-directory =${buildout:directory}/eggs
     ... parts =
     ...     part
     ... [part]
