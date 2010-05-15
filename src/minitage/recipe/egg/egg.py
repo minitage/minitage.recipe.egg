@@ -1582,6 +1582,11 @@ class Recipe(common.MinitageCommonRecipe):
                 '%s-pre-setup-hook' % (dist.project_name.lower()),
                 location
             )
+            if not hooked:
+                hooked = self._call_hook(
+                    '%s-pre-setup-hook' % (dist.project_name),
+                    location
+                ) 
             if patched or hooked:
                 patched = True
 
@@ -1753,6 +1758,11 @@ class Recipe(common.MinitageCommonRecipe):
         if os.path.isdir(self.get_dist_location(nd)):
             self._call_hook(
                 '%s-post-setup-hook' % (d.project_name.lower()),
+                newloc
+            )
+ 
+            self._call_hook(
+                '%s-post-setup-hook' % (d.project_name),
                 newloc
             )
         if not dest in self.eggs_caches:
