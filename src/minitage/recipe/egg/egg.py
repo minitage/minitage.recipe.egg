@@ -250,7 +250,20 @@ class Recipe(common.MinitageCommonRecipe):
     """
     Downloads and installs a distutils Python distribution.
     """
-
+    def platform_scan(self):
+        """Atm, its only used on mac,
+        if the targeted python platform is different from the buildout running
+        process, we will take that into account and reload the Environements
+        according to those values
+        """
+        if self.executable_platform:
+            # reset the platform according to the targeted python
+            self.inst._env.platform = self.executable_platform
+            self.inst._index.platform = self.executable_platform
+            # redo a proper distributions scan
+            self.inst._env.scan(self.eggs_caches)
+            self.inst._index.scan(self.eggs_caches)
+ 
     def print_requirement_for(self, req):
         reqs, rreqs = {}, []
         # not versionnned requirement
@@ -505,20 +518,6 @@ class Recipe(common.MinitageCommonRecipe):
             self.has_setuptools()
         if not self.HAS_DISTRIBUTE and not self.HAS_SETUPTOOLS:
             self.install_distribute()
-
-    def platform_scan(self):
-        """Atm, its only used on mac,
-        if the targeted python platform is different from the buildout running
-        process, we will take that into account and reload the Environements
-        according to those values
-        """
-        if self.executable_platform:
-            # reset the platform according to the targeted python
-            self.inst._env.platform = self.executable_platform
-            self.inst._index.platform = self.executable_platform
-            # redo a proper distributions scan
-            self.inst._env.scan(self.eggs_caches)
-            self.inst._index.scan(self.eggs_caches)
 
     def install_distribute(self):
         self.logger.debug('Installing distribute for the targeted python')
