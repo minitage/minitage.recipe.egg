@@ -74,6 +74,7 @@ ez['use_setuptools'](to_dir='%(destination)s', download_delay=0, no_fake=True)
 if sys.platform.startswith('win'):
     PATCH_MARKER = 'zmpatch'
 orig_versions_re = re.compile('-*%s.*' % PATCH_MARKER, re.U|re.S)
+version_comment_remover_re = re.compile('^(?P<version>[^\#\s]+)\s*\#', re.U|re.S|re.M|re.X)
 
 def get_orig_version(version):
     if not version: version = ''
@@ -263,7 +264,7 @@ class Recipe(common.MinitageCommonRecipe):
             # redo a proper distributions scan
             self.inst._env.scan(self.eggs_caches)
             self.inst._index.scan(self.eggs_caches)
- 
+
     def print_requirement_for(self, req):
         reqs, rreqs = {}, []
         # not versionnned requirement
@@ -374,6 +375,14 @@ class Recipe(common.MinitageCommonRecipe):
             if p.strip()
             ]
 
+        # cleanup bad comments in buildout !
+        if 'versions' in self.buildout:
+            for k in self.buildout['versions']:
+                v = self.buildout['versions'][k].strip()
+                m = version_comment_remover_re.match(v)
+                if m:
+                    self.buildout['versions'][k] = m.groupdict()['version']
+
         self.versions = buildout.get(
             buildout['buildout'].get('versions', '').strip(),
             {}
@@ -479,6 +488,7 @@ class Recipe(common.MinitageCommonRecipe):
             sp = p.stdout.read().replace('\n', '')
             if sp != osx_platform:
                 self.executable_platform = sp
+
 
         zc.buildout.easy_install.Installer._download_cache = self.download_cache
         zc.buildout.easy_install.Installer._always_unzip = True
@@ -1508,9 +1518,16 @@ class Recipe(common.MinitageCommonRecipe):
                                       dist.project_name,
                                       dist.version)
                     if not self.inst._allow_picked_versions:
-                        raise zc.buildout.UserError(
-                            'Picked: %s = %s' % (dist.project_name,
-                                                 dist.version))
+                        # if picked and we have a specific version, just do not
+                        # fail
+                        do_not_fail = False
+                        if isinstance(dist.version, basestring):
+                            if dist.version == self.versions.get(dist.project_name, ''):
+                                do_not_fail = True
+                        if not do_not_fail:
+                            raise zc.buildout.UserError(
+                                'Picked: %s = %s' % (dist.project_name,
+                                                     dist.version))
             working_set = self.ensure_dependencies_there(dest, working_set, first_call, dists)
 
         return self.already_installed_dependencies.values(), working_set
@@ -1585,7 +1602,7 @@ class Recipe(common.MinitageCommonRecipe):
                 hooked = self._call_hook(
                     '%s-pre-setup-hook' % (dist.project_name),
                     location
-                ) 
+                )
             if patched or hooked:
                 patched = True
 
@@ -1759,7 +1776,7 @@ class Recipe(common.MinitageCommonRecipe):
                 '%s-post-setup-hook' % (d.project_name.lower()),
                 newloc
             )
- 
+
             self._call_hook(
                 '%s-post-setup-hook' % (d.project_name),
                 newloc

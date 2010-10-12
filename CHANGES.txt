@@ -3,6 +3,19 @@ CHANGELOG
 =======================
 
 
+
+1.82
+-------
+
+    - more compatible with allow-picked-version == False
+
+
+1.81
+------
+
+    - handle comments in versions bloc.
+
+
 1.76 - 1.77
 ------------
 
