@@ -492,42 +492,46 @@ class Recipe(common.MinitageCommonRecipe):
 
         zc.buildout.easy_install.Installer._download_cache = self.download_cache
         zc.buildout.easy_install.Installer._always_unzip = True
-        self.inst = zc.buildout.easy_install.Installer(
-            dest=None,
-            index=self.index,
-            links=self.find_links,
-            executable=self.executable,
-            always_unzip=self.zip_safe,
-            versions=self.buildout.get('versions', {}),
-            path=self.eggs_caches,
-            newest = self.buildout.newest,
-            allow_hosts=self.options.get('allow-hosts',
-                                         self.buildout.get('allow-hosts', {})
-                                         ),
-        )
+        if not os.path.isdir(self.executable_prefix):
+             message = 'Python seems not to find its prefix : %s' % self.executable_prefix
+             self.logger.warning(message)
+        else:
+            self.inst = zc.buildout.easy_install.Installer(
+                dest=None,
+                index=self.index,
+                links=self.find_links,
+                executable=self.executable,
+                always_unzip=self.zip_safe,
+                versions=self.buildout.get('versions', {}),
+                path=self.eggs_caches,
+                newest = self.buildout.newest,
+                allow_hosts=self.options.get('allow-hosts',
+                                             self.buildout.get('allow-hosts', {})
+                                             ),
+            )
 
-        self.platform_scan()
+            self.platform_scan()
 
-        # FORCING NEWEST MODE !!! see Installer code...
-        self.inst._newest = self.buildout.newest
-        self._dest= os.path.abspath(
-            self.buildout['buildout']['eggs-directory']
-        )
+            # FORCING NEWEST MODE !!! see Installer code...
+            self.inst._newest = self.buildout.newest
+            self._dest= os.path.abspath(
+                self.buildout['buildout']['eggs-directory']
+            )
 
-        # intiatiate environement cache
-        self.scan()
-        self.already_installed_dependencies = {}
+            # intiatiate environement cache
+            self.scan()
+            self.already_installed_dependencies = {}
 
-        # distribute/setuptools support.
-        # add them to sys.path tfor python find them at run time if they
-        # are in the cache and not in the site-packages.
-        self.HAS_DISTRIBUTE = False
-        self.HAS_SETUPTOOLS = False
-        self.has_distribute()
-        if not self.HAS_DISTRIBUTE:
-            self.has_setuptools()
-        if not self.HAS_DISTRIBUTE and not self.HAS_SETUPTOOLS:
-            self.install_distribute()
+            # distribute/setuptools support.
+            # add them to sys.path tfor python find them at run time if they
+            # are in the cache and not in the site-packages.
+            self.HAS_DISTRIBUTE = False
+            self.HAS_SETUPTOOLS = False
+            self.has_distribute()
+            if not self.HAS_DISTRIBUTE:
+                self.has_setuptools()
+            if not self.HAS_DISTRIBUTE and not self.HAS_SETUPTOOLS:
+                self.install_distribute()
 
     def install_distribute(self):
         self.logger.debug('Installing distribute for the targeted python')
@@ -598,6 +602,10 @@ class Recipe(common.MinitageCommonRecipe):
         """real recipe method but renamed for convenience as
         we do not return a path tuple but a workingset
         """
+        if not os.path.isdir(self.executable_prefix):
+             message = 'Python seems not to find its prefix : %s' % self.executable_prefix
+             self.logger.warning(message)
+
         self.logger.info('Installing python egg(s).')
         # rescan, there may be develop eggs newly installed after init
         self.scan()
