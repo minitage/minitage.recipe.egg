@@ -324,6 +324,7 @@ class Recipe(common.MinitageCommonRecipe):
             option = be_option.replace(bdistext, '')
             value = self.options.get(be_option)
             self.logger.debug('%s: Using bdist_ext option: %s = %s' % (distname, option, value))
+            import pdb;pdb.set_trace()  ## Breakpoint ##
             build_ext_options[option] = value
         return  build_ext_options
 
@@ -469,26 +470,6 @@ class Recipe(common.MinitageCommonRecipe):
         # we also need in this case to patch tthe Installer object for its
         # environment to know the targeted envionment
         self.executable_platform = None
-        if self.uname == 'darwin':
-            osx_platform = pkg_resources.get_supported_platform()
-            sget_supported_patform = '%s' % (
-                'from pkg_resources import get_supported_platform;'
-                'print get_supported_platform()'
-            )
-            self._set_compilation_flags()
-            env = copy.deepcopy(os.environ)
-            p = subprocess.Popen(
-                [self.executable, '-c',
-                 sget_supported_patform],
-                env = env,
-                stdout = subprocess.PIPE,
-                stdin = subprocess.PIPE,
-            )
-            p.wait()
-            sp = p.stdout.read().replace('\n', '')
-            if sp != osx_platform:
-                self.executable_platform = sp
-
 
         zc.buildout.easy_install.Installer._download_cache = self.download_cache
         zc.buildout.easy_install.Installer._always_unzip = True
@@ -605,6 +586,25 @@ class Recipe(common.MinitageCommonRecipe):
         if not os.path.isdir(self.executable_prefix):
              message = 'Python seems not to find its prefix : %s' % self.executable_prefix
              self.logger.warning(message)
+        if self.uname == 'darwin':
+            osx_platform = pkg_resources.get_supported_platform()
+            sget_supported_patform = '%s' % (
+                'from pkg_resources import get_supported_platform;'
+                'print get_supported_platform()'
+            )
+            self._set_compilation_flags()
+            env = copy.deepcopy(os.environ)
+            p = subprocess.Popen(
+                [self.executable, '-c',
+                 sget_supported_patform],
+                env = env,
+                stdout = subprocess.PIPE,
+                stdin = subprocess.PIPE,
+            )
+            p.wait()
+            sp = p.stdout.read().replace('\n', '')
+            if sp != osx_platform:
+                self.executable_platform = sp 
 
         self.logger.info('Installing python egg(s).')
         # rescan, there may be develop eggs newly installed after init
