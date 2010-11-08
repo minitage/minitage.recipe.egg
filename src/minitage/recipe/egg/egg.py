@@ -324,7 +324,6 @@ class Recipe(common.MinitageCommonRecipe):
             option = be_option.replace(bdistext, '')
             value = self.options.get(be_option)
             self.logger.debug('%s: Using bdist_ext option: %s = %s' % (distname, option, value))
-            import pdb;pdb.set_trace()  ## Breakpoint ##
             build_ext_options[option] = value
         return  build_ext_options
 
@@ -1176,7 +1175,20 @@ class Recipe(common.MinitageCommonRecipe):
         for requirement in requirements:
             if not isinstance(requirement, pkg_resources.Requirement):
                 requirement = pkg_resources.Requirement.parse(requirement)
+            sreq = '%s' % requirement
             try:
+                # buildout fixed version is more important than setup.py fixed ones!
+                if re.search('.*(==|>=|<=).*', sreq):
+                    vmapping = dict([(a.lower(),a) for a in self.versions])
+                    if requirement.project_name.lower() in vmapping:
+                        oldreq = requirement
+                        requirement = self.inst._constrain(
+                            pkg_resources.Requirement.parse(
+                                vmapping.get(
+                                    requirement.project_name.lower()
+                                )
+                            )
+                        )
                 constrained_req = self.inst._constrain(requirement)
             except zc.buildout.easy_install.IncompatibleVersionError, e:
                if fromdist:
@@ -1194,18 +1206,18 @@ class Recipe(common.MinitageCommonRecipe):
                        self.lastlogs.append(msg)
                    constrained_req = self.inst._constrain(pkg_resources.Requirement.parse(requirement.project_name))
                elif requirement.project_name in self.versions:
-                       msg = '\n\n'
-                       msg += '-' * 80 + '\n'
-                       msg += '!!! Installing buildout fixed version even if packagers pin something else in their setup.py by hand !!!\n'
-                       msg += 'Buildout fixed version "%s==%s" is not consistent with the requirement "%s".\n' % (
-                           requirement.project_name,
-                           e.args[1],
-                           requirement,
-                       )
-                       msg += '-' * 80 + '\n'
-                       if not msg in self.lastlogs:
-                           self.lastlogs.append(msg)
-                       constrained_req = self.inst._constrain(pkg_resources.Requirement.parse(requirement.project_name))
+                   msg = '\n\n'
+                   msg += '-' * 80 + '\n'
+                   msg += '!!! Installing buildout fixed version even if packagers pin something else in their setup.py by hand !!!\n'
+                   msg += 'Buildout fixed version "%s==%s" is not consistent with the requirement "%s".\n' % (
+                       requirement.project_name,
+                       e.args[1],
+                       requirement,
+                   )
+                   msg += '-' * 80 + '\n'
+                   if not msg in self.lastlogs:
+                       self.lastlogs.append(msg)
+                   constrained_req = self.inst._constrain(pkg_resources.Requirement.parse(requirement.project_name))
                else:
                    raise e
             r = constrained_requirements.get(requirement.project_name,
@@ -1278,7 +1290,7 @@ class Recipe(common.MinitageCommonRecipe):
                                   working_set,
                                   first_call, dists):
         """Ensure all distributionss have their dependencies in the working set.
-        Alsso ensure all eggs are at rights versions pointed out by buildout.
+        Also ensure all eggs are at rights versions pointed out by buildout.
         @param dest the final egg cache path
         @param working_set the current working set
         @param already_installed_dependencies Requirements
