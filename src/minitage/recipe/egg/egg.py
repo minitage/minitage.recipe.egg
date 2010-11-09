@@ -1189,6 +1189,7 @@ class Recipe(common.MinitageCommonRecipe):
                                 )
                             )
                         )
+                        requirement.extras = oldreq.extras
                 constrained_req = self.inst._constrain(requirement)
             except zc.buildout.easy_install.IncompatibleVersionError, e:
                if fromdist:
