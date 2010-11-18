@@ -3,6 +3,10 @@ CHANGELOG
 =======================
 
 
+UP
+------
+
+        compatibility with buildout.dumppickledversion
 
 1.82
 -------

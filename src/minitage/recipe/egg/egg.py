@@ -745,10 +745,14 @@ class Recipe(common.MinitageCommonRecipe):
                         root = os.path.join(root, directory)
                     tar.add(root, nd.project_name)
                     tar.close()
-                    dists.append(get_first_dist(ttar))
+                    dist = get_first_dist(ttar)
+                    req = dist.as_requirement()
+                    self.append(req, dist, dists)
             else:
                 # scan for the distribution archive infos.
-                dists.append(get_first_dist(fname))
+                dist = get_first_dist(fname)
+                req = dist.as_requirement()
+                self.append(req, dist, dists)
 
             # sort duplicates
             paths = []
@@ -1511,7 +1515,7 @@ class Recipe(common.MinitageCommonRecipe):
                 if requirement.extras:
                     _, working_set = self._install_requirements(dist.requires(requirement.extras), dest, working_set, first_call=False)
                     self.feed_dependency_tree(dist.requires(requirement.extras), dist)
-                dists.append(dist)
+                self.append(requirement, dist, dists)
 
             for dist in dists:
                 # remove similar dists found in sys.path if we have ones, to
@@ -2092,6 +2096,12 @@ class Recipe(common.MinitageCommonRecipe):
 
         return dist.location
 
+
+    def append(self, requirement, dist, dists):
+        """Goal is to centralize dists insertion thus to be monkey pached in extensions
+        """
+        dists.append(dist)
+        return dists
 
 
 # vim:set et sts=4 ts=4 tw=80:
