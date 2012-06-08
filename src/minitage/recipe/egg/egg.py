@@ -1389,7 +1389,7 @@ class Recipe(common.MinitageCommonRecipe):
                     # only activate now if the dist is already installed
                     # this fix perfs issues not to call activate
                     # each round
-                    self.activate_dist(working_set, dist)
+                    self.activate_dist(working_set, dist, silent=True)
                 # installing extras if required
                 else:
                     fdist = None
@@ -1529,7 +1529,7 @@ class Recipe(common.MinitageCommonRecipe):
 
         return self.already_installed_dependencies.values(), working_set
 
-    def activate_dist(self, working_set, dist):
+    def activate_dist(self, working_set, dist, silent=False):
         # remove similar dists found in sys.path if we have ones, to
         # avoid conflict errors
         similar_dist = working_set.find(pkg_resources.Requirement.parse(dist.project_name))
@@ -1550,7 +1550,8 @@ class Recipe(common.MinitageCommonRecipe):
             # and
             # requirement.specs[0][0] == '==')
             ):
-            self.logger.debug('Picked: %s = %s',
+            if not silent:
+                self.logger.debug('Picked: %s = %s',
                               dist.project_name,
                               dist.version)
             if not self.inst._allow_picked_versions:
