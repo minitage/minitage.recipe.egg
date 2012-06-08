@@ -6,7 +6,7 @@ setupdir = os.path.abspath(
 os.chdir(setupdir)
 
 name='minitage.recipe.egg'
-version = '1.91'
+version = '1.92.dev0'
 
 def read(*rnames):
     return open(
