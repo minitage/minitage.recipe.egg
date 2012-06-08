@@ -3,39 +3,43 @@ CHANGELOG
 =======================
 
 
-UP
-------
+1.89 (unreleased)
+------------------------
+- fix some dependency tree bugs [kiorky]
 
-        compatibility with buildout.dumppickledversion
+1.88
+------------------------
+ - compatibility with buildout.dumppickledversion
+
 
 1.82
 -------
 
-    - more compatible with allow-picked-version == False
+- more compatible with allow-picked-version == False
 
 
 1.81
 ------
 
-    - handle comments in versions bloc.
+- handle comments in versions bloc.
 
 
 1.76 - 1.77
 ------------
 
-    - Some distribute/setuptools fixes
-    - fix tests
-    - better error output
+- Some distribute/setuptools fixes
+- fix tests
+- better error output
 
 1.75
 -----
 
-    - better handle of download problems
+- better handle of download problems
 
 1.73 - 1.74:
 --------------
 
-    - Fix for cross platform builds
+- Fix for cross platform builds
       It allows lot of things on OSX
 
             (mostly run buildout with a flat compiled python
@@ -44,46 +48,46 @@ UP
 1.72
 ------
 
-    - fix to avoid conflicterror when you fix versions in buildout.cfg and somerone fix another in setup.py, it just display a big warning
+- fix to avoid conflicterror when you fix versions in buildout.cfg and somerone fix another in setup.py, it just display a big warning
 
 1.71
 -----
 
-    - better support for distribute, again.
+- better support for distribute, again.
 
 1.62
 -----
 
-    - specific dir changepath fixed
-    - modify how environ is computed
-    - ugly bugfix when your egg cache is not on the same partition as the
+- specific dir changepath fixed
+- modify how environ is computed
+- ugly bugfix when your egg cache is not on the same partition as the
       buildout as it make cross device references errors when renaming from
       sandbox
-    - zipped egg bugfix
-    - make sdist take precedence over eggs when you are patching on the fly.
-    - bugfix for compatibility with python2.4 and urlparse(tuple)
-    - add bdist_ext options support like zc.recipe.egg:custom
-    - make recipe cooler with distribution filename identifiers
-    - split tests in multiple files
+- zipped egg bugfix
+- make sdist take precedence over eggs when you are patching on the fly.
+- bugfix for compatibility with python2.4 and urlparse(tuple)
+- add bdist_ext options support like zc.recipe.egg:custom
+- make recipe cooler with distribution filename identifiers
+- split tests in multiple files
 
 1.38
 ------
 
-    - decorator helper
+- decorator helper
 
 1.37
 ------
 
-    - fix exception mappings when a patch fails
+- fix exception mappings when a patch fails
 
 1.36
 --------
 
-    - fix tests develop eggs
+- fix tests develop eggs
 
 1.35
 -------
 
-    - splitted out from minitage.recipe
+- splitted out from minitage.recipe
 
 

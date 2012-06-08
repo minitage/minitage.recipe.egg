@@ -603,7 +603,7 @@ class Recipe(common.MinitageCommonRecipe):
             p.wait()
             sp = p.stdout.read().replace('\n', '')
             if sp != osx_platform:
-                self.executable_platform = sp 
+                self.executable_platform = sp
 
         self.logger.info('Installing python egg(s).')
         # rescan, there may be develop eggs newly installed after init
@@ -1311,7 +1311,7 @@ class Recipe(common.MinitageCommonRecipe):
             deps_reqs.extend(dist.requires())
             self.feed_dependency_tree(dist.requires(), dist)
         if deps_reqs:
-            ideps_reqs = self.filter_already_installed_requirents( deps_reqs)
+            ideps_reqs = self.filter_already_installed_requirents(deps_reqs)
             d_rs, working_set = self._install_requirements(ideps_reqs, dest, working_set, first_call = False)
 
         if first_call:
@@ -1355,7 +1355,7 @@ class Recipe(common.MinitageCommonRecipe):
         # Maybe an existing dist is already the best dist that satisfies the
         # requirement
         if requirements:
-            dists = []
+            new_dists, dists = [], []
             #self.logger.debug('Trying to install %s' % requirements)
             for requirement in requirements:
                 similary_req = self.already_installed_dependencies.get(requirement.project_name, None)
@@ -1385,8 +1385,13 @@ class Recipe(common.MinitageCommonRecipe):
                         except:
                             pass
 
+                if dist is not None:
+                    # only activate now if the dist is already installed
+                    # this fix perfs issues not to call activate
+                    # each round
+                    self.activate_dist(working_set, dist)
                 # installing extras if required
-                if dist is None:
+                else:
                     fdist = None
                     try:
                         # if we come from a patched distribution, i have already
@@ -1510,52 +1515,56 @@ class Recipe(common.MinitageCommonRecipe):
 
                     # advertise environements of our new dist
                     self.add_dist(dist)
-
                 # honouring extra requirements
                 if requirement.extras:
                     _, working_set = self._install_requirements(dist.requires(requirement.extras), dest, working_set, first_call=False)
                     self.feed_dependency_tree(dist.requires(requirement.extras), dist)
                 self.append(requirement, dist, dists)
+                new_dists.append(dist)
 
-            for dist in dists:
-                # remove similar dists found in sys.path if we have ones, to
-                # avoid conflict errors
-                similar_dist = working_set.find(pkg_resources.Requirement.parse(dist.project_name))
-                if similar_dist and (similar_dist != dist):
-                    if self.get_dist_location(similar_dist) in working_set.entries:
-                        working_set.entries.remove(self.get_dist_location(similar_dist))
-                    if self.get_dist_location(similar_dist) in working_set.entry_keys:
-                        del working_set.entry_keys[self.get_dist_location(similar_dist)]
-                    if similar_dist.project_name in working_set.by_key:
-                        del working_set.by_key[similar_dist.project_name]
+            for dist in new_dists:
+                self.activate_dist(working_set, dist)
 
-                working_set.add(dist)
-                self.feed_dependency_tree(dist.requires(), dist)
-                # Check whether we picked a version and, if we did, report it:
-                if not (
-                    dist.precedence == pkg_resources.DEVELOP_DIST
-                    or
-                    (len(requirement.specs) == 1
-                     and
-                     requirement.specs[0][0] == '==')
-                    ):
-                    self.logger.debug('Picked: %s = %s',
-                                      dist.project_name,
-                                      dist.version)
-                    if not self.inst._allow_picked_versions:
-                        # if picked and we have a specific version, just do not
-                        # fail
-                        do_not_fail = False
-                        if isinstance(dist.version, basestring):
-                            if dist.version == self.versions.get(dist.project_name, ''):
-                                do_not_fail = True
-                        if not do_not_fail:
-                            raise zc.buildout.UserError(
-                                'Picked: %s = %s' % (dist.project_name,
-                                                     dist.version))
             working_set = self.ensure_dependencies_there(dest, working_set, first_call, dists)
 
         return self.already_installed_dependencies.values(), working_set
+
+    def activate_dist(self, working_set, dist):
+        # remove similar dists found in sys.path if we have ones, to
+        # avoid conflict errors
+        similar_dist = working_set.find(pkg_resources.Requirement.parse(dist.project_name))
+        if similar_dist and (similar_dist != dist):
+            if self.get_dist_location(similar_dist) in working_set.entries:
+                working_set.entries.remove(self.get_dist_location(similar_dist))
+            if self.get_dist_location(similar_dist) in working_set.entry_keys:
+                del working_set.entry_keys[self.get_dist_location(similar_dist)]
+            if similar_dist.project_name in working_set.by_key:
+                del working_set.by_key[similar_dist.project_name]
+        working_set.add(dist)
+        self.feed_dependency_tree(dist.requires(), dist)
+        # Check whether we picked a version and, if we did, report it:
+        if not (
+            dist.precedence == pkg_resources.DEVELOP_DIST
+            #or
+            #(len(requirement.specs) == 1
+            # and
+            # requirement.specs[0][0] == '==')
+            ):
+            self.logger.debug('Picked: %s = %s',
+                              dist.project_name,
+                              dist.version)
+            if not self.inst._allow_picked_versions:
+                # if picked and we have a specific version, just do not
+                # fail
+                do_not_fail = False
+                if isinstance(dist.version, basestring):
+                    if dist.version == self.versions.get(dist.project_name, ''):
+                        do_not_fail = True
+                if not do_not_fail:
+                    raise zc.buildout.UserError(
+                        'Picked: %s = %s' % (dist.project_name,
+                                             dist.version))
+
 
     def maybe_get_patched_requirement(self, dist):
         # mark the distribution as installed
