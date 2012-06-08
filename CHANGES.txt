@@ -3,8 +3,8 @@ CHANGELOG
 =======================
 
 
-1.89 (unreleased)
-------------------------
+1.89 (2012-06-08)
+-----------------
 - fix some dependency tree bugs [kiorky]
 
 1.88
