@@ -6,7 +6,7 @@ setupdir = os.path.abspath(
 os.chdir(setupdir)
 
 name='minitage.recipe.egg'
-version = '1.89dev'
+version = '1.89'
 
 def read(*rnames):
     return open(
@@ -14,7 +14,7 @@ def read(*rnames):
     ).read()
 
 long_description = (
-    read('README.txt')
+    read('README.rst')
     + '\n'\
     + read('src', 'minitage', 'recipe', 'egg', 'README.txt')
     + '\n'
