@@ -3,7 +3,7 @@ CHANGELOG
 =======================
 
 
-1.91 (unreleased)
+1.91 (2012-06-08)
 -----------------
 
 - less verbose again
