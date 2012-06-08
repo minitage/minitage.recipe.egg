@@ -6,7 +6,7 @@ CHANGELOG
 1.91 (unreleased)
 -----------------
 
-- Nothing changed yet.
+- less verbose again
 
 
 1.90 (2012-06-08)

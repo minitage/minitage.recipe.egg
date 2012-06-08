@@ -1549,7 +1549,9 @@ class Recipe(common.MinitageCommonRecipe):
             #(len(requirement.specs) == 1
             # and
             # requirement.specs[0][0] == '==')
-            ):
+            ) and (not dist.project_name.lower()
+                   in [a.lower()
+                       for a in self.inst._versions]):
             if not silent:
                 self.logger.debug('Picked: %s = %s',
                               dist.project_name,
