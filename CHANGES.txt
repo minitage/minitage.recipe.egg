@@ -6,7 +6,7 @@ CHANGELOG
 1.92 (unreleased)
 -----------------
 
-- Nothing changed yet.
+- fix extras handling in some border cases
 
 
 1.91 (2012-06-08)

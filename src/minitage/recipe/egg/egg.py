@@ -1366,8 +1366,17 @@ class Recipe(common.MinitageCommonRecipe):
                         msg = "'%s' is already installed as '%s'." % (requirement, similary_req)
                     if requirers and self.logger.getEffectiveLevel() <= logging.DEBUG:
                         msg += ' Requirers: %s' % (', '.join(['%s'%self.dependency_tree[similary_req][d] for d in requirers]))
-                    self.logger.debug(msg)
-                    continue
+                    # last thing check extras
+                    rskip = False
+                    try:
+                        if ([a for a in similary_req.extras]
+                            == [a for a in requirement.extras]):
+                            rskip = True
+                    except:
+                        pass
+                    if rskip:
+                        self.logger.debug(msg)
+                        continue
                 #try:
                 dist, avail, maybe_patched_requirement = self._satisfied(requirement, working_set)
 
