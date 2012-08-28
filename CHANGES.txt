@@ -3,7 +3,7 @@ CHANGELOG
 =======================
 
 
-1.92 (unreleased)
+1.92 (2012-08-28)
 -----------------
 
 - fix extras handling in some border cases
