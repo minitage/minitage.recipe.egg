@@ -263,6 +263,7 @@ class Recipe(common.MinitageCommonRecipe):
             self.inst._index.platform = self.executable_platform
             # redo a proper distributions scan
             self.inst._env.scan(self.eggs_caches)
+
             self.inst._index.scan(self.eggs_caches)
 
     def print_requirement_for(self, req):
@@ -387,6 +388,10 @@ class Recipe(common.MinitageCommonRecipe):
             buildout['buildout'].get('versions', '').strip(),
             {}
         )
+        # case insensitive requirements !
+        for item in self.versions:
+            self.versions[item.lower()] = self.versions[item]
+
         self.buildout_versions = buildout['buildout'].get('versions', '').strip()
         if not self.buildout_versions in buildout:
             self.buildout_versions = None
@@ -1179,11 +1184,13 @@ class Recipe(common.MinitageCommonRecipe):
         for requirement in requirements:
             if not isinstance(requirement, pkg_resources.Requirement):
                 requirement = pkg_resources.Requirement.parse(requirement)
+
             sreq = '%s' % requirement
+
             try:
                 # buildout fixed version is more important than setup.py fixed ones!
                 if re.search('.*(==|>=|<=).*', sreq):
-                    vmapping = dict([(a.lower(),a) for a in self.versions])
+                    vmapping = dict([(a.lower(), a) for a in self.versions])
                     if requirement.project_name.lower() in vmapping:
                         oldreq = requirement
                         requirement = self.inst._constrain(
@@ -1249,6 +1256,7 @@ class Recipe(common.MinitageCommonRecipe):
                                     vpatch = True
                         if vpatch:
                             r.specs[i] = ('==', version)
+
         return constrained_requirements.values()
 
     def _constrain_requirement(self, requirement, fromdist=None):
