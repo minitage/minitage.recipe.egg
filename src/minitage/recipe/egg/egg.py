@@ -420,11 +420,11 @@ class Recipe(common.MinitageCommonRecipe):
         )
 
         # real eggs
-        self.eggs = [i\
+        self.eggs = [i
                      for i in self.options.get('eggs', '').split('\n')\
                      if i]
 
-        self.eggs += [i\
+        self.eggs += [i
                      for i in self.options.get('egg', '').split('\n')\
                      if i]
         if not self.eggs:
@@ -640,6 +640,8 @@ class Recipe(common.MinitageCommonRecipe):
             extras.extend(requirements)
         # installing classical requirements
         if self.eggs or extras:
+            if isinstance(self.eggs, tuple):
+                self.eggs = list(self.eggs)
             drequirements, working_set = self._install_requirements(
                 self.eggs + extras,
                 dest,

@@ -3,10 +3,10 @@ CHANGELOG
 =======================
 
 
-1.93 (unreleased)
+1.93 (2013-02-13)
 -----------------
 
-- Nothing changed yet.
+- buildout2 compat
 
 
 1.92 (2012-08-28)
