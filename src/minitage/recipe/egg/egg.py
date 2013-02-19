@@ -332,6 +332,8 @@ class Recipe(common.MinitageCommonRecipe):
         self.sav_environ = copy.deepcopy(os.environ)
         common.MinitageCommonRecipe.__init__(self,
                                     buildout, name, options)
+        if os.path.exists(self.executable):
+            self.executable = os.path.abspath(self.executable)
         # override recipe default and download into a subdir
         # minitage-cache/eggs
         # separate archives in downloaddir/minitage

@@ -6,7 +6,7 @@ CHANGELOG
 1.94 (unreleased)
 -----------------
 
-- Nothing changed yet.
+- buildout2 compat again
 
 
 1.93 (2013-02-13)
