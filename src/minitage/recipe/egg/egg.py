@@ -829,7 +829,7 @@ class Recipe(common.MinitageCommonRecipe):
                     if not self.already_installed_dependencies:
                         self.already_installed_dependencies = {}
                     for r in requirements:
-                        self.already_installed_dependencies[r.project_name] = r
+                        self.already_installed_dependencies[r.project_name.lower()] = r
                     installed_dist = self._install_distribution(dist, dest, working_set)
                     installed_dist.activate()
                     # for buildout to use it !
@@ -839,7 +839,7 @@ class Recipe(common.MinitageCommonRecipe):
                     self.versions[installed_dist.project_name] = installed_dist.version
                     self.add_dist(installed_dist)
                     # be sure to have the really installed dist requiremen'ts bits
-                    self.already_installed_dependencies[installed_dist.project_name] = installed_dist.as_requirement()
+                    self.already_installed_dependencies[installed_dist.project_name.lower()] = installed_dist.as_requirement()
         return requirements, working_set
 
     def scan(self, scanpaths=None):
@@ -1272,7 +1272,7 @@ class Recipe(common.MinitageCommonRecipe):
         installed_requirements = self.already_installed_dependencies.values()
         if self.already_installed_dependencies:
             for requirement in constrained_requirements:
-                similary_req = self.already_installed_dependencies.get(requirement.project_name, None)
+                similary_req = self.already_installed_dependencies.get(requirement.project_name.lower(), None)
                 found = True
                 if not similary_req:
                     found = False
@@ -1289,7 +1289,7 @@ class Recipe(common.MinitageCommonRecipe):
                     # something new on an already installed item, mark it to be
                     # reinstalled
                     if similary_req:
-                        del self.already_installed_dependencies[requirement.project_name]
+                        del self.already_installed_dependencies[requirement.project_name.lower()]
         else:
             items = constrained_requirements
         return items
@@ -1319,7 +1319,7 @@ class Recipe(common.MinitageCommonRecipe):
         deps_reqs = []
         for dist in dists:
             r = self._constrain_requirement(dist.as_requirement(), fromdist=dist)
-            self.already_installed_dependencies.setdefault(r.project_name, r)
+            self.already_installed_dependencies.setdefault(r.project_name.lower(), r)
             deps_reqs.extend(dist.requires())
             self.feed_dependency_tree(dist.requires(), dist)
         if deps_reqs:
@@ -1370,7 +1370,7 @@ class Recipe(common.MinitageCommonRecipe):
             new_dists, dists = [], []
             #self.logger.debug('Trying to install %s' % requirements)
             for requirement in requirements:
-                similary_req = self.already_installed_dependencies.get(requirement.project_name, None)
+                similary_req = self.already_installed_dependencies.get(requirement.project_name.lower(), None)
                 if similary_req:
                     requirers = self.dependency_tree.get(similary_req, None)
                     msg = "'%s' is already installed." % (requirement)
@@ -1684,7 +1684,9 @@ class Recipe(common.MinitageCommonRecipe):
         for i, reqs_list in enumerate(reqs_lists):
             # do not constrain there, it will be done in the recursive install
             # call
-            requires.extend(reqs_list)
+            for item in reqs_list:
+                if not item.project_name.lower() in self.already_installed_dependencies:
+                    requires.append(item)
 
         # compile time
         dist_location = self.get_dist_location(dist)
@@ -1716,7 +1718,7 @@ class Recipe(common.MinitageCommonRecipe):
         # mark the current distribution as installed to avoid circular calls
         if not dist.project_name in self.already_installed_dependencies:
             self.feed_dependency_tree(requires, dist)
-            self.already_installed_dependencies[dist.project_name] = self.maybe_get_patched_requirement(dist)
+            self.already_installed_dependencies[dist.project_name.lower()] = self.maybe_get_patched_requirement(dist)
 
         # recusivly install dist requirements before finnishing to install it.
         if requires and not self.options.get('ez-nodependencies'):
