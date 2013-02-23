@@ -3,7 +3,7 @@ CHANGELOG
 =======================
 
 
-1.95 (unreleased)
+1.95 (2013-02-23)
 -----------------
 
 - avoid circular error (buildout2 again) [kiorky]
