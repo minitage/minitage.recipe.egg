@@ -6,12 +6,6 @@ CHANGELOG
 1.96 (unreleased)
 -----------------
 
-- Nothing changed yet.
-
-
-1.95 (2013-02-23)
------------------
-
 - avoid circular error (buildout2 again) [kiorky]
 
 
