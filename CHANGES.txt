@@ -3,7 +3,7 @@ CHANGELOG
 =======================
 
 
-1.97 (unreleased)
+1.97 (2013-03-29)
 -----------------
 
 - Support for looking distribution inside default cache directory
