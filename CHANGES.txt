@@ -6,7 +6,8 @@ CHANGELOG
 1.97 (unreleased)
 -----------------
 
-- Nothing changed yet.
+- Support for looking distribution inside default cache directory
+- Offline bugfix, load correctly source dist from all download caches
 
 
 1.96 (2013-02-23)

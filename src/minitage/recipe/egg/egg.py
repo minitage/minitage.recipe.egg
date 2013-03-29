@@ -343,6 +343,18 @@ class Recipe(common.MinitageCommonRecipe):
         self.download_cache = os.path.abspath(
             os.path.join(self.download_cache, 'eggs')
         )
+        additionnal_caches = [
+            os.path.join(
+                self.buildout['buildout'].get(
+                    'download-directory',
+                    self.buildout['buildout'].get('download-cache')),
+                'dist'),
+        ]
+        self.download_caches = [self.download_cache]
+        for additionnal_cache in additionnal_caches:
+            if (os.path.exists(additionnal_cache)
+                and not additionnal_cache in self.download_caches):
+                self.download_caches.append(additionnal_cache)
 
         build_ext_options = {}
         swig = options.get('swig')
@@ -877,19 +889,22 @@ class Recipe(common.MinitageCommonRecipe):
 
     def _search_sdists(self, requirement, working_set, multiple=True):
         sreq = '%s' % requirement
-        env = self.make_env([self.download_cache])
         avail, sdists = None, []
         dist = None
         results = []
         # try to scan source distribtions
-        for file in os.listdir(self.download_cache):
-            path = os.path.join(self.download_cache, file)
-            if os.path.isfile(path):
-                dists = [d
-                         for d in setuptools.package_index.distros_for_url(path)]
-                if len(dists) > 1:
-                    dists = [ d for d in dists if d.version]
-                sdists.extend(dists)
+        env = self.make_env(self.download_caches)
+        for cache in self.download_caches:
+            for f in os.listdir(cache):
+                path = os.path.join(cache, f)
+                if os.path.isfile(path):
+                    dists = [d
+                             for d in setuptools.package_index.distros_for_url(path)]
+                    if len(dists) > 1:
+                        dists = [ d for d in dists if d.version]
+                    sdists.extend([d
+                                   for d in dists
+                                   if d.precedence == pkg_resources.SOURCE_DIST])
         for distro in sdists:
             env.add(distro)
         # last try, testing sources (very useful for offline mode
