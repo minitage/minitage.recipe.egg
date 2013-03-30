@@ -978,6 +978,8 @@ class Recipe(common.MinitageCommonRecipe):
         # if we are in online mode, trying to get the latest version available
         candidate = None
         # first try with what we have in binary form
+
+
         try:
             dist, avail = self.inst._satisfied(requirement)
         except zc.buildout.easy_install.MissingDistribution:

@@ -5,67 +5,33 @@ on indexes and be very conservative on what we already got local.
 
 Let's create a buildout configuration file and a basic egg not published on pypi, and install it::
 
-    >>> rmdir(tempdir)
-    >>> mkdir(tempdir)
-    >>> cd(tempdir)
-    >>> a = [mkdir(d) for d in ('eggs', 'develop-eggs', 'bin', 'src')]
-    >>> install_develop_eggs(['minitage.recipe.egg'])
-    >>> install_eggs_from_pathes(['zc.buildout'], sys.path)
-    >>> touch('buildout.cfg')
-    >>> sh('buildout -o bootstrap')
-    buildout -o bootstrap...
-    >>> if not os.path.exists('foo'):
-    ...     mkdir('foo')
-    ... else:
-    ...     rmdir(foo)
-    ...     mkdir('foo')
-    >>> touch('foo/setup.py', data="""
-    ... from setuptools import setup
-    ... setup(name='foo', version='1.0')
-    ...
-    ... """)
-    >>> touch('foo/toto.py', data="""
-    ... def f():
-    ...     print "foo"
-    ...
-    ... """)
-    >>> noecho = [os.remove(d) for d in os.listdir('.') if '.tar.gz' in d]
-    >>> os.chdir('foo')
-    >>> sh('python setup.py sdist')
-    p...
-    >>> touch('setup.py', data="""
-    ... from setuptools import setup
-    ... setup(name='foo', version='2.0')
-    ...
-    ... """)
-    >>> sh('python setup.py sdist')
-    p...
-    >>> noecho = [shutil.copy(os.path.join('dist', d), os.path.join('..', d)) for d in os.listdir('dist')]
-    >>> os.chdir('..')
-    >>> index_url = start_server(os.path.sep.join(tempdir))
+    >>> globals().update(layer['globs'])
+    >>> makedist()
+    >>> makedist(version='2.0')
     >>> data = """
     ... [versions]
     ... foo=1.0
     ... [buildout]
     ... eggs-directory =${buildout:directory}/eggs
     ... download-cache=${buildout:directory}
+    ... index=%(index)s
     ... parts =
     ...     part
     ... [part]
     ... recipe=minitage.recipe.egg
     ... find-links=%(index)s
     ... eggs=foo
-    ... """%{'index': index_url}
+    ... """%bsettings
     >>> touch('buildout.cfg', data=data)
-    >>> noecho = [remove(os.path.join('eggs', egg)) for egg in os.listdir('eggs') if 'foo' in egg]
+    >>> clean()
     >>> sh('bin/buildout -vvvvv install part')
     bin/...
     Installing part.
     minitage.recipe: Installing python egg(s)...
-    minitage.recipe: Downloading http://...:.../foo-1.0.tar.gz in /tmp/buildout.test/minitage/eggs/foo-1.0.tar.gz
+    minitage.recipe: Downloading http://...:.../foo-1.0.tar.gz in .../minitage/eggs/foo-1.0.tar.gz
     minitage.recipe: Unpacking in ...
     Processing foo-1.0.tar.gz...
-    minitage.recipe: Installed foo 1.0 (/tmp/buildout.test/eggs/foo-1.0-p....egg)...
+    minitage.recipe: Installed foo 1.0 (.../eggs/foo-1.0-p....egg)...
 
 Well, now, we are 1.0.
 Removing the version bit, but choosing to be non newest will make
@@ -79,11 +45,12 @@ buildout not to install the new foo-2.0 version.::
     ... parts =
     ...     part
     ... versions = versions
+    ... index=%(index)s
     ... [t]
     ... recipe=minitage.recipe.egg
     ... find-links=%(index)s
     ... eggs=foo
-    ... """%{'index': index_url}
+    ... """%bsettings
     >>> touch('buildout.cfg', data=data)
     >>> sh('bin/buildout -Nvvvvv install t')
     b...
@@ -111,31 +78,19 @@ File urls work in offline mode.::
     ... [buildout]
     ... download-cache=${buildout:directory}
     ... eggs-directory =${buildout:directory}/eggs
+    ... index=%(index)s
     ... parts =
     ...     part
     ... [part]
     ... recipe=minitage.recipe.egg
     ... urls=file://${buildout:directory}/foo-2.0.tar.gz
-    ... """
+    ... """ % bsettings
+    >>> clean()
     >>> touch('buildout.cfg', data=data)
     >>> sh('bin/buildout -vvvvv install part')
     b...
-    >>> cat('buildout.cfg')
-    <BLANKLINE>
-    [buildout]
-    download-cache=${buildout:directory}
-    eggs-directory =${buildout:directory}/eggs
-    parts =
-        part
-    versions = versions
-    [part]
-    recipe=minitage.recipe.egg
-    urls=file://${buildout:directory}/foo-2.0.tar.gz...
-    [versions]
-    foo = 2.0...
-    >>> noecho = [remove(os.path.join('eggs', egg)) for egg in os.listdir('eggs') if 'foo' in egg]
     >>> [egg for egg in os.listdir('eggs') if 'foo' in egg]
-    []
+    ['foo-2.0-py...egg']
     >>> sh('bin/buildout -o install part')
     b...
     >>> [egg for egg in os.listdir('eggs') if 'foo' in egg]

@@ -62,12 +62,12 @@ setup(
     zip_safe=False,
     install_requires = [
         'zc.buildout',
-
         'minitage.core',
         'minitage.recipe.common',
         'iniparse',
     ],
-    extras_require={'test': ['IPython', 'zope.testing', 'mocker']},
+    extras_require={'test': [
+        'IPython', 'plone.testing', 'mocker']},
     #tests_require = ['zope.testing'],
     #test_suite = '%s.tests.test_suite' % name,
     # adding zdu, setuptools seems to order recipes executions

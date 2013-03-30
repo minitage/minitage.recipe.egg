@@ -9,3 +9,6 @@ parts
 *pyo
 *pyc
 build
+tags.python
+test.env
+
