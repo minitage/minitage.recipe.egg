@@ -67,7 +67,7 @@ setup(
         'iniparse',
     ],
     extras_require={'test': [
-        'IPython', 'plone.testing', 'mocker']},
+        'plone.testing', 'mocker']},
     #tests_require = ['zope.testing'],
     #test_suite = '%s.tests.test_suite' % name,
     # adding zdu, setuptools seems to order recipes executions

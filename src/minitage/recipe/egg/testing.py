@@ -30,6 +30,9 @@ from zc.buildout.testing import (
 from minitage.core.common import remove_path, which
 
 
+D = os.path.dirname
+
+
 def get_uname():
     if 'linux' in sys.platform:
         return 'linux'
@@ -195,10 +198,12 @@ def clean():
 
 
 def cleandist():
-    noecho = [os.remove(os.path.join('minitage/eggs', d))
-              for d in os.listdir('minitage/eggs') if '.tar.gz' in d]
-    noecho = [os.remove(os.path.join('eggs', d))
-              for d in os.listdir('eggs') if '.tar.gz' in d]
+    if os.path.exists('minitage/eggs'):
+        noecho = [os.remove(os.path.join('minitage/eggs', d))
+                  for d in os.listdir('minitage/eggs') if '.tar.gz' in d]
+    if os.path.exists('eggs'):
+        noecho = [os.remove(os.path.join('eggs', d))
+                  for d in os.listdir('eggs') if '.tar.gz' in d]
     noecho = [os.remove(d)
               for d in os.listdir('.') if '.tar.gz' in d]
 
@@ -277,10 +282,19 @@ class Layer(Base):
         os.chdir(bp)
         touch('buildout.cfg')
         bootstrap()
+        self['opath'] = os.environ['PATH']
+        cwd = pkg_resources.resource_filename(
+            'minitage.recipe.egg', 'tests')
+        root = D(D(D(D(D(cwd)))))
+        rbin = os.path.join(root, 'bin')
+        if not rbin in self['opath']:
+            os.environ['PATH'] = ":".join(
+                [rbin, self['opath']])
 
     def tearDown(self):
         for f in self['__tear_downs']:
             f()
+        os.environ['PATH'] = self['opath']
 
     def testSetUp(self):
         os.chdir(self['bp'])
@@ -289,6 +303,7 @@ class Layer(Base):
                 mkdir(p)
 
     def testTearDown(self):
+        os.chdir(self['bp'])
         cleandist()
         clean()
         for p in (self['eggp'], self['dl']):

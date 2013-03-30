@@ -13,6 +13,9 @@ The egg has those entry point:
     - *egg*: install python eggs / packages 'setuptoolisables'
 
 
+.. image:: https://secure.travis-ci.org/minitage/minitage.recipe.egg.png
+    :target: http://travis-ci.org/minitage/minitage.recipe.egg
+
 
 
 The reasons why i have rewrite yet another buildout recipes builder are:

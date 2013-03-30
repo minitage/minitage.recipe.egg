@@ -1,0 +1,11 @@
+language: python
+python: 2.7
+env:
+  - TARGET=test
+  - TARGET=python-validation.sh
+
+install:
+  - python bootstrap.py
+  - bin/buildout -N -t 3
+
+script: bin/$TARGET
