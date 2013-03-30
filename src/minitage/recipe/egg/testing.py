@@ -29,6 +29,7 @@ from zc.buildout.testing import (
 
 from minitage.core.common import remove_path, which
 
+
 def get_uname():
     if 'linux' in sys.platform:
         return 'linux'
@@ -36,6 +37,7 @@ def get_uname():
         return sys.platform
 
 uname = get_uname()
+
 
 def get_args(args):
     res = []
@@ -51,16 +53,21 @@ def get_joined_args(args):
     res = get_args(args)
     return os.path.join(*res)
 
+
 current_dir = os.path.abspath(os.path.dirname(__file__))
+
+
 def mkdir(*args):
     a = get_joined_args(args)
     if not os.path.isdir(a):
         makedirs(a)
 
+
 def rmdir(*args):
     a = get_joined_args(args)
     if os.path.isdir(a):
         shutil.rmtree(a)
+
 
 def sh(cmd, in_data=None, out=None):
     if out is not None:
@@ -99,9 +106,11 @@ def ls(*args):
     else:
         print 'No directory named %s' % args
 
+
 def cd(*args):
     a = get_joined_args(args)
     os.chdir(a)
+
 
 def config(filename):
     return os.path.join(current_dir, filename)
@@ -121,8 +130,9 @@ def install(dist, destination):
             shutil.copyfile(dist.location, destination)
     else:
         open(os.path.join(
-            destination, dist.project_name+'.egg-link'), 'w'
+            destination, dist.project_name + '.egg-link'), 'w'
         ).write(dist.location)
+
 
 def install_develop(dist, destination):
     if not isinstance(destination, str):
@@ -133,8 +143,9 @@ def install_develop(dist, destination):
             pkg_resources.Requirement.parse(dist))
     open(
         os.path.join(destination,
-                     dist.project_name+'.egg-link'), 'w'
+                     dist.project_name + '.egg-link'), 'w'
     ).write(dist.location)
+
 
 def install_buildout(requirements, destination):
     develop_path = os.path.join(
@@ -161,23 +172,27 @@ def install_buildout(requirements, destination):
         for dist in todo.get(p, []):
             install(dist, eggs_path)
 
+
 def cat(*args, **kwargs):
     filename = os.path.join(*args)
     if os.path.isfile(filename):
         data = open(filename).read()
         if kwargs.get('returndata', False):
-           return data
+            return data
         print data
     else:
         print 'No file named %s' % filename
 
+
 def touch(*args, **kwargs):
     filename = os.path.join(*args)
-    open(filename, 'w').write(kwargs.get('data',''))
+    open(filename, 'w').write(kwargs.get('data', ''))
+
 
 def clean():
     noecho = [remove(os.path.join('eggs', egg))
               for egg in os.listdir('eggs') if 'foo' in egg]
+
 
 def cleandist():
     noecho = [os.remove(os.path.join('minitage/eggs', d))
@@ -199,9 +214,10 @@ def f():
     print "foo"
 """
 
+
 def makedist(name="foo", version="1.0", module=MODULE, setup=''):
     touch('foo/setup.py',
-          data = SETUP % (setup, name, version))
+          data=SETUP % (setup, name, version))
     touch('foo/toto.py', data=MODULE)
     os.chdir('foo')
     sh('python setup.py sdist', out=False)
@@ -210,15 +226,18 @@ def makedist(name="foo", version="1.0", module=MODULE, setup=''):
         for d in os.listdir('dist')]
     os.chdir('..')
 
+
 def buildout(*args):
     argv = sys.argv[:]
     sys.argv = ["foo"] + list(args)
     ret = bo.main()
-    sys.argv=argv
+    sys.argv = argv
     return ret
+
 
 def bootstrap():
     sh('buildout -o bootstrap', out=StringIO())
+
 
 class Layer(Base):
 
@@ -237,7 +256,8 @@ class Layer(Base):
         if not os.path.exists(testd):
             os.makedirs(testd)
         self['__tear_downs'] = __tear_downs = []
-        self['register_teardown'] =  __tear_downs.append
+        self['register_teardown'] = __tear_downs.append
+
         def start_index(path):
             port, thread = _start_server(path, name=path)
             url = 'http://localhost:%s/' % port
@@ -277,9 +297,11 @@ class Layer(Base):
 
 MINITAGE_RECIPE_EGG_FIXTURE = Layer()
 
+
 class IntegrationLayer(Layer):
     """."""
     defaultBases = (MINITAGE_RECIPE_EGG_FIXTURE,)
+
 
 class FunctionnalLayer(IntegrationLayer):
     """."""
@@ -288,4 +310,3 @@ class FunctionnalLayer(IntegrationLayer):
 MINITAGE_RECIPE_EGG_INTEGRATION_TESTING = IntegrationLayer()
 MINITAGE_RECIPE_EGG_FUNCTIONAL_TESTING = FunctionnalLayer()
 # vim:set et sts=4 ts=4 tw=80:
-

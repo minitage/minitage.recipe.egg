@@ -26,15 +26,11 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-
-
 __docformat__ = 'restructuredtext en'
 
 import copy
 import distutils
 import os
-import urllib
-import urllib2
 import urlparse
 import shutil
 import sys
@@ -45,8 +41,6 @@ import subprocess
 import py_compile
 import traceback
 import logging
-from pprint import pprint
-from distutils.dir_util import copy_tree
 
 import setuptools
 from ConfigParser import NoOptionError
@@ -73,19 +67,27 @@ ez['use_setuptools'](to_dir='%(destination)s', download_delay=0, no_fake=True)
 
 if sys.platform.startswith('win'):
     PATCH_MARKER = 'zmpatch'
-orig_versions_re = re.compile('-*%s.*' % PATCH_MARKER, re.U|re.S)
-version_comment_remover_re = re.compile('^(?P<version>[^\#\s]+)\s*\#', re.U|re.S|re.M|re.X)
+orig_versions_re = re.compile('-*%s.*' % PATCH_MARKER, re.U | re.S)
+version_comment_remover_re = re.compile('^(?P<version>[^\#\s]+)\s*\#', re.U | re.S | re.M | re.X)
+
 
 def get_orig_version(version):
-    if not version: version = ''
+    if not version:
+        version = ''
     return orig_versions_re.sub('', version)
 
-class IncompatibleVersionError(zc.buildout.easy_install.IncompatibleVersionError): pass
-class DistributionDownloadError(Exception): pass
+
+class IncompatibleVersionError(zc.buildout.easy_install.IncompatibleVersionError):
+    """"""
+
+
+class DistributionDownloadError(Exception):
+    """"""
+
 
 def get_requirement_version(requirement):
-    patched_egg, version= False, None
-    operators = ['=', '<', '<']
+    patched_egg, version = False, None
+    #operators = ['=', '<', '<']
     for spec in requirement.specs:
         for item in spec:
             sitem = '%s' % item
@@ -98,34 +100,37 @@ def get_requirement_version(requirement):
                 version = spec[1]
     return version, patched_egg
 
-first_digit_re =  re.compile('^(\d).*', re.M|re.S|re.U)
+first_digit_re = re.compile('^(\d).*', re.M | re.S | re.U)
+
+
 def get_first_dist(where):
     dists = [a
              for a in setuptools.package_index.distros_for_filename(
                  where
-             )
-           ]
-    if len (dists) > 1:
+             )]
+    if len(dists) > 1:
         sorted_dists = dists[:]
         sorted_dists = [d for d in sorted_dists if d.version]
         if len(sorted_dists) > 1:
             sorted_dists = [e
                             for e in sorted_dists
-                            if first_digit_re.match(e.version)
-                           ]
+                            if first_digit_re.match(e.version)]
             if len(sorted_dists) == 1:
                 dists = sorted_dists
     return dists[0]
+
 
 def merge_extras(a, b):
     a.extras += b.extras
     a.extras = tuple(set(a.extras))
     return a
 
+
 def merge_specs(a, b):
     a.specs += b.specs
     a.specs = list(set(a.specs))
     return a
+
 
 def redo_pyc(egg, executable=sys.executable, environ=os.environ):
     #print "Location : %s" % egg
@@ -149,26 +154,27 @@ def redo_pyc(egg, executable=sys.executable, environ=os.environ):
             # OK, it looks like we should try to compile.
             # Remove old files.
             for suffix in 'co':
-                if os.path.exists(filepath+suffix):
-                    os.remove(filepath+suffix)
+                if os.path.exists(filepath + suffix):
+                    os.remove(filepath + suffix)
             tocompile.append(filepath)
-
     try:
         # Compile under current optimization
         args = [zc.buildout.easy_install._safe_arg(sys.executable)]
         if sys.platform.startswith('win'):
             args = [sys.executable]
         args.extend(['-m', 'py_compile'])
-        subprocess.Popen(args+tocompile, env=environ).wait()
+        subprocess.Popen(args + tocompile, env=environ).wait()
         if __debug__:
         # Recompile under other optimization. :)
             args.insert(1, '-O')
-            subprocess.Popen(args+tocompile, env=environ).wait()
-    except py_compile.PyCompileError, error:
+            subprocess.Popen(args + tocompile, env=environ).wait()
+    except py_compile.PyCompileError:
         logger.warning("Couldn't compile %s", filepath)
+
 
 class EggPatchError(Exception):
     """."""
+
 
 class EasyInstallError(core.MinimergeError):
 
@@ -178,6 +184,7 @@ class EasyInstallError(core.MinimergeError):
         self.failed_specs = kwargs.get('specs', None)
         self.failed_working_set = kwargs.get('working_set', None)
         self.failed_prefix = kwargs.get('prefix', None)
+
 
 def dependency_resolver_decorator(f):
     def callback(self, *args, **kwargs):
@@ -220,13 +227,13 @@ def dependency_resolver_decorator(f):
             if dist:
                 print "Easy_install failed on some distribution:"
                 if dist:
-                    print "    - Failed dist: %s" %  dist.as_requirement()
+                    print "    - Failed dist: %s" % dist.as_requirement()
             if len(specs) == 1:
                 fd = get_first_dist(specs[0])
                 if fd:
                     # print up to level6 dependencies
                     req = fd.as_requirement()
-                    print "    - Failed specs: %s" %  fd.as_requirement()
+                    print "    - Failed specs: %s" % fd.as_requirement()
                     reqs = self.print_requirement_for(req)
                     for r in reqs:
                         rreqs = self.print_requirement_for(r)
@@ -244,7 +251,6 @@ def dependency_resolver_decorator(f):
             raise e
         return ret
     return callback
-
 
 
 class Recipe(common.MinitageCommonRecipe):
@@ -295,12 +301,13 @@ class Recipe(common.MinitageCommonRecipe):
             print
             print "* Full dependencies mapping:"
             keys = self.dependency_tree.keys()
+
             def asort(a, b):
                 if a.project_name > b.project_name:
                     return 1
                 if a.project_name == b.project_name:
                     return 0
-                if a.project_name <  b.project_name:
+                if a.project_name < b.project_name:
                     return -1
             keys.sort(asort)
             for key in keys:
@@ -326,12 +333,12 @@ class Recipe(common.MinitageCommonRecipe):
             value = self.options.get(be_option)
             self.logger.debug('%s: Using bdist_ext option: %s = %s' % (distname, option, value))
             build_ext_options[option] = value
-        return  build_ext_options
+        return build_ext_options
 
     def __init__(self, buildout, name, options):
         self.sav_environ = copy.deepcopy(os.environ)
         common.MinitageCommonRecipe.__init__(self,
-                                    buildout, name, options)
+                                             buildout, name, options)
         if os.path.exists(self.executable):
             self.executable = os.path.abspath(self.executable)
         # override recipe default and download into a subdir
@@ -352,8 +359,10 @@ class Recipe(common.MinitageCommonRecipe):
         ]
         self.download_caches = [self.download_cache]
         for additionnal_cache in additionnal_caches:
-            if (os.path.exists(additionnal_cache)
-                and not additionnal_cache in self.download_caches):
+            if (
+                os.path.exists(additionnal_cache)
+                and not additionnal_cache in self.download_caches
+            ):
                 self.download_caches.append(additionnal_cache)
 
         build_ext_options = {}
@@ -361,8 +370,7 @@ class Recipe(common.MinitageCommonRecipe):
         if swig:
             options['swig'] = build_ext_options['swig'] = os.path.join(
                 buildout['buildout']['directory'],
-                swig,
-            )
+                swig)
 
         for be_option in ('define', 'undef', 'libraries', 'link-objects',
                           'debug', 'force', 'compiler', 'swig-cpp', 'swig-opts',
@@ -387,8 +395,7 @@ class Recipe(common.MinitageCommonRecipe):
         self.extra_paths = [
             os.path.join(buildout['buildout']['directory'], p.strip())
             for p in options.get('extra-paths', '').split('\n')
-            if p.strip()
-            ]
+            if p.strip()]
 
         # cleanup bad comments in buildout !
         if 'versions' in self.buildout:
@@ -435,24 +442,22 @@ class Recipe(common.MinitageCommonRecipe):
 
         # real eggs
         self.eggs = [i
-                     for i in self.options.get('eggs', '').split('\n')\
+                     for i in self.options.get('eggs', '').split('\n')
                      if i]
 
         self.eggs += [i
-                     for i in self.options.get('egg', '').split('\n')\
-                     if i]
-        if not self.eggs:
-            eggs = [name]
+                      for i in self.options.get('egg', '').split('\n')
+                      if i]
+        #if not self.eggs:
+        #    eggs = [name]
         # findlinks for eggs
         self.install_previous_version = self.options.get('install-previous-version', '')
         self.find_links = splitstrip(self.options.get('find-links', ''))
         self.find_links += splitstrip(self.buildout['buildout'].get('find-links', ''))
 
         #index replacement
-        self.index = self.options.get('index',
-                                     self.buildout['buildout'].get('index', None)
-                                     )
-
+        self.index = self.options.get(
+            'index', self.buildout['buildout'].get('index', None))
         # zip flag for eggs
         self.zip_safe = False
         if self.options.get('zip-safe', 'true'):
@@ -479,8 +484,6 @@ class Recipe(common.MinitageCommonRecipe):
             self.options['allow-hosts'] = 'None'
             self.buildout['buildout']['allow-hosts'] = 'None'
             self.buildout._allow_hosts = ('None',)
-
-
         # on darwin, you can easily have a supported platform different from
         # the one you ran buildout with
         # example -> macosx-flat -> macosx-i386
@@ -488,12 +491,11 @@ class Recipe(common.MinitageCommonRecipe):
         # we also need in this case to patch tthe Installer object for its
         # environment to know the targeted envionment
         self.executable_platform = None
-
         zc.buildout.easy_install.Installer._download_cache = self.download_cache
         zc.buildout.easy_install.Installer._always_unzip = True
         if not os.path.isdir(self.executable_prefix):
-             message = 'Python seems not to find its prefix : %s' % self.executable_prefix
-             self.logger.warning(message)
+            message = 'Python seems not to find its prefix : %s' % self.executable_prefix
+            self.logger.warning(message)
         else:
             self.inst = zc.buildout.easy_install.Installer(
                 dest=None,
@@ -503,19 +505,17 @@ class Recipe(common.MinitageCommonRecipe):
                 always_unzip=self.zip_safe,
                 versions=self.buildout.get('versions', {}),
                 path=self.eggs_caches,
-                newest = self.buildout.newest,
-                allow_hosts=self.options.get('allow-hosts',
-                                             self.buildout.get('allow-hosts', {})
-                                             ),
+                newest=self.buildout.newest,
+                allow_hosts=self.options.get(
+                    'allow-hosts',
+                    self.buildout.get('allow-hosts', {})
+                ),
             )
-
             self.platform_scan()
-
             # FORCING NEWEST MODE !!! see Installer code...
             self.inst._newest = self.buildout.newest
-            self._dest= os.path.abspath(
-                self.buildout['buildout']['eggs-directory']
-            )
+            self._dest = os.path.abspath(
+                self.buildout['buildout']['eggs-directory'])
 
             # intiatiate environement cache
             self.scan()
@@ -538,8 +538,8 @@ class Recipe(common.MinitageCommonRecipe):
         ppath = os.environ.get('PYTHONPATH', '')
         os.environ['PYTHONPATH'] = ''
         open(tfile, 'w').write(
-            BOOTSTRAP_DISTRIBUTE_SCRIPT% {'destination':
-                                          self.eggs_directory}
+            BOOTSTRAP_DISTRIBUTE_SCRIPT % {
+                'destination': self.eggs_directory}
         )
         ret = subprocess.Popen([self.executable, tfile]).wait()
         os.environ['PYTHONPATH'] = ppath
@@ -580,7 +580,6 @@ class Recipe(common.MinitageCommonRecipe):
                                     ' setuptools inside your python.')
         return self.HAS_SETUPTOOLS
 
-
     def update(self):
         """update."""
         self.install()
@@ -602,8 +601,8 @@ class Recipe(common.MinitageCommonRecipe):
         we do not return a path tuple but a workingset
         """
         if not os.path.isdir(self.executable_prefix):
-             message = 'Python seems not to find its prefix : %s' % self.executable_prefix
-             self.logger.warning(message)
+            message = 'Python seems not to find its prefix : %s' % self.executable_prefix
+            self.logger.warning(message)
         if self.uname == 'darwin':
             osx_platform = pkg_resources.get_supported_platform()
             sget_supported_patform = '%s' % (
@@ -615,9 +614,9 @@ class Recipe(common.MinitageCommonRecipe):
             p = subprocess.Popen(
                 [self.executable, '-c',
                  sget_supported_patform],
-                env = env,
-                stdout = subprocess.PIPE,
-                stdin = subprocess.PIPE,
+                env=env,
+                stdout=subprocess.PIPE,
+                stdin=subprocess.PIPE,
             )
             p.wait()
             sp = p.stdout.read().replace('\n', '')
@@ -703,7 +702,7 @@ class Recipe(common.MinitageCommonRecipe):
             # if it is a repo, making a local copy
             # and scan its distro
             if os.path.isdir(fname):
-                self._call_hook('%s-post-download-hook'%bfname, fname)
+                self._call_hook('%s-post-download-hook' % bfname, fname)
                 tmp = os.path.join(self.tmp_directory, os.path.basename(fname))
                 f = IFetcherFactory(self.minitage_config)
                 for fetcher in f.products:
@@ -716,11 +715,11 @@ class Recipe(common.MinitageCommonRecipe):
                 # go inside dist and scan for setup.py
                 self.options['compile-directory'] = tmp
                 if os.path.isdir(tmp):
-                    self._call_hook('%s-post-checkout-hook'%bfname, tmp)
+                    self._call_hook('%s-post-checkout-hook' % bfname, tmp)
                 # build the egg distribution in there.
                 self._sanitizeenv(working_set)
                 # recursivly easy installing dependencies
-                ez = easy_install.easy_install(distutils.core.Distribution())
+                easy_install.easy_install(distutils.core.Distribution())
                 oldcwd = os.getcwd()
                 # generating metadata for source distributions
                 #
@@ -743,8 +742,7 @@ class Recipe(common.MinitageCommonRecipe):
                     sdist_post_args = '2>&1 >> /dev/null'
                     if self.logger.getEffectiveLevel() <= logging.DEBUG:
                         sdist_args, sdist_post_args = '', ''
-
-                    ret = os.system('%s setup.py %s sdist %s' % (sys.executable, sdist_args, sdist_post_args))
+                    os.system('%s setup.py %s sdist %s' % (sys.executable, sdist_args, sdist_post_args))
                     sdist_files = [os.path.join(tmp, 'dist', a) for a in os.listdir('dist')]
                 except Exception, e:
                     self.logger.error('sdist in %s failed' % os.getcwd())
@@ -755,10 +753,11 @@ class Recipe(common.MinitageCommonRecipe):
                     nd = get_first_dist(sdist_files[0])
                     tempdir = tempfile.mkdtemp()
                     ttar = os.path.join(
-                        tempdir, '%s-%s.%s' % (nd.project_name,
-                                              nd.version,
-                                              'tar.gz'
-                                             )
+                        tempdir, '%s-%s.%s' % (
+                            nd.project_name,
+                            nd.version,
+                            'tar.gz'
+                        )
                     )
                     tar = tarfile.open(ttar, mode='w:gz')
                     root = tmp
@@ -776,11 +775,10 @@ class Recipe(common.MinitageCommonRecipe):
                 self.append(req, dist, dists)
 
             # sort duplicates
-            paths = []
             toinstall = []
             for dist in dists:
-                if not self.get_dist_location(dist) in [self.get_dist_location(d)\
-                                         for d in toinstall]:
+                if not self.get_dist_location(dist) in [self.get_dist_location(d)
+                                                        for d in toinstall]:
                     toinstall.append(dist)
 
             for dist in toinstall:
@@ -809,8 +807,8 @@ class Recipe(common.MinitageCommonRecipe):
                             if PATCH_MARKER in arg:
                                 version = arg
                         requirement = pkg_resources.Requirement.parse(
-                                        '%s == %s' % (dist.project_name, version)
-                                        )
+                            '%s == %s' % (dist.project_name, version)
+                        )
                         try:
                             # version already pinned in the buildout, with the
                             # patched bits, but the egg isnt already installed
@@ -859,7 +857,6 @@ class Recipe(common.MinitageCommonRecipe):
             scanpaths = self.eggs_caches
         self.inst._env.scan(scanpaths)
 
-
     def make_env(self, search_path=None, platform=None, python=None):
         """Make a pkg_resources Environment instance while
         honnouring the following attributes
@@ -890,7 +887,6 @@ class Recipe(common.MinitageCommonRecipe):
     def _search_sdists(self, requirement, working_set, multiple=True):
         sreq = '%s' % requirement
         avail, sdists = None, []
-        dist = None
         results = []
         # try to scan source distribtions
         env = self.make_env(self.download_caches)
@@ -901,7 +897,7 @@ class Recipe(common.MinitageCommonRecipe):
                     dists = [d
                              for d in setuptools.package_index.distros_for_url(path)]
                     if len(dists) > 1:
-                        dists = [ d for d in dists if d.version]
+                        dists = [d for d in dists if d.version]
                     sdists.extend([d
                                    for d in dists
                                    if d.precedence == pkg_resources.SOURCE_DIST])
@@ -915,7 +911,7 @@ class Recipe(common.MinitageCommonRecipe):
             requirement = pkg_resources.Requirement.parse(orig_versions_re.sub('', sreq))
             avail = env.best_match(requirement, working_set)
         if avail:
-            if avail.precedence  == pkg_resources.SOURCE_DIST:
+            if avail.precedence == pkg_resources.SOURCE_DIST:
                 results.append(avail)
         if (not results) or multiple:
             # maybe we can get one on the available indexes !
@@ -926,6 +922,7 @@ class Recipe(common.MinitageCommonRecipe):
                                    for sdist in availables
                                    if sdist.precedence == pkg_resources.SOURCE_DIST
                                    and (sdist in requirement)]
+
                 def md5sort(x):
                     p = urlparse.urlparse(self.get_dist_location(x))
                     # tuple in python2.4
@@ -936,13 +933,14 @@ class Recipe(common.MinitageCommonRecipe):
                     return 1
                 sorted_dict, keys = {}, []
                 # order dists from last version with preferrence for md5 urls
+
                 def version_compare(x, y):
-                   if pkg_resources.parse_version(x)  > pkg_resources.parse_version(y):
-                      return -1
-                   elif pkg_resources.parse_version(x) == pkg_resources.parse_version(y):
-                      return 0
-                   else:
-                      return 1
+                    if pkg_resources.parse_version(x) > pkg_resources.parse_version(y):
+                        return -1
+                    elif pkg_resources.parse_version(x) == pkg_resources.parse_version(y):
+                        return 0
+                    else:
+                        return 1
                 if matching_sdists:
                     for sdist in matching_sdists:
                         key = '%s' % sdist.version
@@ -954,8 +952,9 @@ class Recipe(common.MinitageCommonRecipe):
                     keys.sort(version_compare)
                     if not multiple:
                         availables = [matching_sdists[0]]
-                    noecho = [results.extend(sorted_dict[key]) for key in keys]
-            except Exception, e:
+                    for key in keys:
+                        results.extend(sorted_dict[key])
+            except Exception:
                 pass
             if not results:
                 raise zc.buildout.easy_install.MissingDistribution(
@@ -978,7 +977,6 @@ class Recipe(common.MinitageCommonRecipe):
         # if we are in online mode, trying to get the latest version available
         candidate = None
         # first try with what we have in binary form
-
 
         try:
             dist, avail = self.inst._satisfied(requirement)
@@ -1099,7 +1097,7 @@ class Recipe(common.MinitageCommonRecipe):
                 try:
                     avail = self._search_sdist(requirement,
                                                working_set)
-                except zc.buildout.easy_install.MissingDistribution, e:
+                except zc.buildout.easy_install.MissingDistribution:
                     # if this is a minitage patched egg, there is a chance that the
                     # part which build the egg was not built yet.
                     # in this case, we try to find the egg without the patched
@@ -1112,17 +1110,15 @@ class Recipe(common.MinitageCommonRecipe):
                     if patched_egg:
                         try:
                             requirement = pkg_resources.Requirement.parse(
-                                    "%s==%s" % (
-                                        requirement.project_name, get_orig_version(v)
-                                    )
-                                )
-                        except Exception, e:
+                                "%s==%s" % (
+                                    requirement.project_name, get_orig_version(v)
+                                ))
+                        except Exception:
                             # egg without fixed version needing patch
                             # we remove the patch bit appended to version
                             if version.startswith(PATCH_MARKER) or not version:
                                 requirement = pkg_resources.Requirement.parse(
-                                    requirement.project_name
-                                )
+                                    requirement.project_name)
                             else:
                                 raise
                         avail = self._search_sdist(requirement, working_set)
@@ -1156,7 +1152,7 @@ class Recipe(common.MinitageCommonRecipe):
             self.buildout[self.buildout_versions][name] = version
         self.versions[name] = version
         self.inst._versions[name] = version
-        requirement = pkg_resources.Requirement.parse( '%s==%s' % (name, version))
+        requirement = pkg_resources.Requirement.parse('%s==%s' % (name, version))
         if not os.path.exists(cfg):
             self.logger.error(
                 'It seems you are not using buildout.cfg'
@@ -1185,8 +1181,9 @@ class Recipe(common.MinitageCommonRecipe):
             # only if version changed
             if existing_version != version:
                 config.set(versions_part, requirement.project_name, version)
-                backup_base = os.path.join(self.buildout._buildout_dir,
-                                      '%s.before.fixed_version.bak' % fconfig)
+                backup_base = os.path.join(
+                    self.buildout._buildout_dir,
+                    '%s.before.fixed_version.bak' % fconfig)
                 #index = 0
                 backup = backup_base
                 #while os.path.exists(backup):
@@ -1224,35 +1221,35 @@ class Recipe(common.MinitageCommonRecipe):
                         requirement.extras = oldreq.extras
                 constrained_req = self.inst._constrain(requirement)
             except zc.buildout.easy_install.IncompatibleVersionError, e:
-               if fromdist:
-                   msg = '\n\n'
-                   msg += '-' * 80 + '\n'
-                   msg += '!!! Installing buildout fixed version even if packagers pin something else in their setup.py by hand !!!\n'
-                   msg += 'Buildout fixed version "%s==%s" is not consistent with the requirement "%s".\n%s' % (
-                       requirement.project_name,
-                       e.args[1],
-                       requirement,
-                       'Required by %s-%s (%s)\n' % (fromdist.project_name, fromdist.version, self.get_dist_location(fromdist))
-                   )
-                   msg += '-' * 80 + '\n'
-                   if not msg in self.lastlogs:
-                       self.lastlogs.append(msg)
-                   constrained_req = self.inst._constrain(pkg_resources.Requirement.parse(requirement.project_name))
-               elif requirement.project_name in self.versions:
-                   msg = '\n\n'
-                   msg += '-' * 80 + '\n'
-                   msg += '!!! Installing buildout fixed version even if packagers pin something else in their setup.py by hand !!!\n'
-                   msg += 'Buildout fixed version "%s==%s" is not consistent with the requirement "%s".\n' % (
-                       requirement.project_name,
-                       e.args[1],
-                       requirement,
-                   )
-                   msg += '-' * 80 + '\n'
-                   if not msg in self.lastlogs:
-                       self.lastlogs.append(msg)
-                   constrained_req = self.inst._constrain(pkg_resources.Requirement.parse(requirement.project_name))
-               else:
-                   raise e
+                if fromdist:
+                    msg = '\n\n'
+                    msg += '-' * 80 + '\n'
+                    msg += '!!! Installing buildout fixed version even if packagers pin something else in their setup.py by hand !!!\n'
+                    msg += 'Buildout fixed version "%s==%s" is not consistent with the requirement "%s".\n%s' % (
+                        requirement.project_name,
+                        e.args[1],
+                        requirement,
+                        'Required by %s-%s (%s)\n' % (fromdist.project_name, fromdist.version, self.get_dist_location(fromdist))
+                    )
+                    msg += '-' * 80 + '\n'
+                    if not msg in self.lastlogs:
+                        self.lastlogs.append(msg)
+                    constrained_req = self.inst._constrain(pkg_resources.Requirement.parse(requirement.project_name))
+                elif requirement.project_name in self.versions:
+                    msg = '\n\n'
+                    msg += '-' * 80 + '\n'
+                    msg += '!!! Installing buildout fixed version even if packagers pin something else in their setup.py by hand !!!\n'
+                    msg += 'Buildout fixed version "%s==%s" is not consistent with the requirement "%s".\n' % (
+                        requirement.project_name,
+                        e.args[1],
+                        requirement,
+                    )
+                    msg += '-' * 80 + '\n'
+                    if not msg in self.lastlogs:
+                        self.lastlogs.append(msg)
+                    constrained_req = self.inst._constrain(pkg_resources.Requirement.parse(requirement.project_name))
+                else:
+                    raise e
             r = constrained_requirements.get(requirement.project_name,
                                              constrained_req)
             # constrain doesnt conserve extras :::
@@ -1286,7 +1283,7 @@ class Recipe(common.MinitageCommonRecipe):
     def filter_already_installed_requirents(self, requirements):
         items = []
         constrained_requirements = self._constrain(requirements)
-        installed_requirements = self.already_installed_dependencies.values()
+        self.already_installed_dependencies.values()
         if self.already_installed_dependencies:
             for requirement in constrained_requirements:
                 similary_req = self.already_installed_dependencies.get(requirement.project_name.lower(), None)
@@ -1341,7 +1338,7 @@ class Recipe(common.MinitageCommonRecipe):
             self.feed_dependency_tree(dist.requires(), dist)
         if deps_reqs:
             ideps_reqs = self.filter_already_installed_requirents(deps_reqs)
-            d_rs, working_set = self._install_requirements(ideps_reqs, dest, working_set, first_call = False)
+            d_rs, working_set = self._install_requirements(ideps_reqs, dest, working_set, first_call=False)
 
         if first_call:
             self.logger.debug('All egg dependencies seem to be installed!')
@@ -1391,15 +1388,22 @@ class Recipe(common.MinitageCommonRecipe):
                 if similary_req:
                     requirers = self.dependency_tree.get(similary_req, None)
                     msg = "'%s' is already installed." % (requirement)
-                    if ('%s'%requirement) != ('%s'%similary_req) and not (similary_req in requirement):
+                    if (
+                        ('%s' % requirement) != ('%s' % similary_req)
+                        and not (similary_req in requirement)
+                    ):
                         msg = "'%s' is already installed as '%s'." % (requirement, similary_req)
                     if requirers and self.logger.getEffectiveLevel() <= logging.DEBUG:
-                        msg += ' Requirers: %s' % (', '.join(['%s'%self.dependency_tree[similary_req][d] for d in requirers]))
+                        msg += ' Requirers: %s' % (
+                            ', '.join(['%s' % self.dependency_tree[similary_req][d]
+                                       for d in requirers]))
                     # last thing check extras
                     rskip = False
                     try:
-                        if ([a for a in similary_req.extras]
-                            == [a for a in requirement.extras]):
+                        if (
+                            [a for a in similary_req.extras]
+                            == [a for a in requirement.extras]
+                        ):
                             rskip = True
                     except:
                         pass
@@ -1443,8 +1447,7 @@ class Recipe(common.MinitageCommonRecipe):
                         # try to find the same distribution on other links,
                         if avail:
                             requirement = pkg_resources.Requirement.parse(
-                                '%s==%s'%(avail.project_name, avail.version)
-                            )
+                                '%s==%s' % (avail.project_name, avail.version))
                         # eg when the download_url returns 404 or error
                         sdist, sdists = None, self._search_sdists(requirement, working_set)
                         while sdists:
@@ -1468,10 +1471,11 @@ class Recipe(common.MinitageCommonRecipe):
                                 except Exception, e:
                                     self.logger.error(
                                         '%s can\'t be downloaded'
-                                        ' from %s.'%(sdist,
-                                                     sdist.location))
-                                    self.logger.error('Encountered Exception:'
-                                                      ' %s: %s'%(e.__class__,e))
+                                        ' from %s.' % (sdist,
+                                                       sdist.location))
+                                    self.logger.error(
+                                        'Encountered Exception:'
+                                        ' %s: %s' % (e.__class__, e))
 
                                 if fdist:
                                     break
@@ -1587,13 +1591,13 @@ class Recipe(common.MinitageCommonRecipe):
             #(len(requirement.specs) == 1
             # and
             # requirement.specs[0][0] == '==')
-            ) and (not dist.project_name.lower()
-                   in [a.lower()
-                       for a in self.inst._versions]):
+        ) and (
+            not dist.project_name.lower()
+            in [a.lower()
+                for a in self.inst._versions]):
             if not silent:
-                self.logger.debug('Picked: %s = %s',
-                              dist.project_name,
-                              dist.version)
+                self.logger.debug(
+                    'Picked: %s = %s', dist.project_name, dist.version)
             if not self.inst._allow_picked_versions:
                 # if picked and we have a specific version, just do not
                 # fail
@@ -1606,14 +1610,13 @@ class Recipe(common.MinitageCommonRecipe):
                         'Picked: %s = %s' % (dist.project_name,
                                              dist.version))
 
-
     def maybe_get_patched_requirement(self, dist):
         # mark the distribution as installed
         v, _, _, patches, _ = self._get_dist_patches(dist.project_name, dist.version)
         r = pkg_resources.Requirement.parse('%s' % (dist.project_name))
         if v:
             r = pkg_resources.Requirement.parse('%s==%s' % (dist.project_name, v))
-        if len(patches)>0:
+        if len(patches) > 0:
             self.inst._versions[r.project_name] = v
             self.versions[r.project_name] = v
         else:
@@ -1634,7 +1637,6 @@ class Recipe(common.MinitageCommonRecipe):
         # where we put the builded  eggs
         tmp = os.path.join(self.tmp_directory, 'eggs')
 
-
         if not os.path.isdir(tmp):
             os.makedirs(tmp)
         # maybe extract time
@@ -1653,17 +1655,14 @@ class Recipe(common.MinitageCommonRecipe):
                 repackaged = True
                 setuptools.command.setopt.edit_config(
                     setup_cfg,
-                    dict(build_ext=beo)
-                )
+                    dict(build_ext=beo))
         sub_prefix = self.options.get(
-            '%s-build-dir' % ( dist.project_name.lower()),
-            None
-        )
+            '%s-build-dir' % (dist.project_name.lower()),
+            None)
         if sub_prefix:
             location = os.path.join(location, sub_prefix)
 
         self.options['compile-directory'] = location
-
 
         if not location.endswith('.egg'):
             # maybe patch time
@@ -1713,11 +1712,10 @@ class Recipe(common.MinitageCommonRecipe):
                                     pkg_resources.DEVELOP_DIST)):
             if patched or repackaged:
                 ttar = os.path.join(
-                    tempfile.mkdtemp(), '%s-%s.%s' % (dist.project_name,
-                                                      dist.version,
-                                                      'tar.gz'
-                                                     )
-                )
+                    tempfile.mkdtemp(),
+                    '%s-%s.%s' % (dist.project_name,
+                                  dist.version,
+                                  'tar.gz'))
                 tar = tarfile.open(ttar, mode='w:gz')
                 tar.add(location, os.path.basename(location))
                 tar.close()
@@ -1739,9 +1737,7 @@ class Recipe(common.MinitageCommonRecipe):
 
         # recusivly install dist requirements before finnishing to install it.
         if requires and not self.options.get('ez-nodependencies'):
-            _, working_set = self._install_requirements(requires, dest, working_set, first_call = False)
-
-
+            _, working_set = self._install_requirements(requires, dest, working_set, first_call=False)
 
         # install code ( calling ez and etc.)
         self._run_easy_install(tmp, ['%s' % dist_location], working_set=working_set)
@@ -1756,24 +1752,27 @@ class Recipe(common.MinitageCommonRecipe):
             raise zc.buildout.UserError("Couldn't install: %s" % dist)
 
         if len(dists) > 1:
-            self.logger.warn("Installing %s\n"
-                        "caused multiple distributions to be installed:\n"
-                        "%s\n",
-                        dist, '\n'.join(map(str, dists)))
+            self.logger.warn(
+                "Installing %s\n"
+                "caused multiple distributions to be installed:\n"
+                "%s\n",
+                dist, '\n'.join(map(str, dists)))
         else:
             d = dists[0]
             if d.project_name != dist.project_name:
-                self.logger.warn("Installing %s\n"
-                            "Caused installation of a distribution:\n"
-                            "%s\n"
-                            "with a different project name.",
-                            dist, d)
+                self.logger.warn(
+                    "Installing %s\n"
+                    "Caused installation of a distribution:\n"
+                    "%s\n"
+                    "with a different project name.",
+                    dist, d)
             if d.version != dist.version:
-                self.logger.warn("Installing %s\n"
-                            "Caused installation of a distribution:\n"
-                            "%s\n"
-                            "with a different version.",
-                            dist, d)
+                self.logger.warn(
+                    "Installing %s\n"
+                    "Caused installation of a distribution:\n"
+                    "%s\n"
+                    "with a different version.",
+                    dist, d)
 
         ## check if cache container is there.
         if not os.path.isdir(dest):
@@ -1797,19 +1796,19 @@ class Recipe(common.MinitageCommonRecipe):
                 if dist.project_name:
                     norm_dist_name = dist.project_name.lower()
             if (
-                ( norm_d_name == norm_dist_name)
+                (norm_d_name == norm_dist_name)
                 and (patched)
                 and (not os.path.isfile(self.get_dist_location(d)))
-               ):
+            ):
                 # just rename the egg to match the patched name if any
                 # and also remove python version bits
-                without_pyver_re = re.compile("(.*)-py\d+.\d+.*$", re.M|re.S)
-                d_egg_name =    without_pyver_re.sub("\\1", d.egg_name())
+                without_pyver_re = re.compile("(.*)-py\d+.\d+.*$", re.M | re.S)
+                d_egg_name = without_pyver_re.sub("\\1", d.egg_name())
                 dist_egg_name = without_pyver_re.sub("\\1", dist.egg_name())
                 newloc = newloc.replace(d_egg_name, dist_egg_name)
                 pkginfo = os.path.join(d._provider.egg_info, 'PKG-INFO')
                 pkginfo_contents = open(pkginfo, 'rU').readlines()
-                version_pkginfo_re = re.compile('^(V|v)ersion: .*', re.M|re.U)
+                version_pkginfo_re = re.compile('^(V|v)ersion: .*', re.M | re.U)
                 patched_content = []
                 for line in pkginfo_contents:
                     if version_pkginfo_re.match(line):
@@ -1839,9 +1838,9 @@ class Recipe(common.MinitageCommonRecipe):
             # regenerate pyc's in this directory
             if os.path.isdir(newloc):
                 try:
-                    redo_pyc(os.path.abspath(newloc), executable = self.executable)
+                    redo_pyc(os.path.abspath(newloc), executable=self.executable)
                 except Exception, e:
-                    self.logger.error('Can\'t compile pyc files in %s.' % newloc)
+                    self.logger.error('%s\nCan\'t compile pyc files in %s.' % (e, newloc))
             nd = pkg_resources.Distribution.from_filename(
                 newloc, metadata=pkg_resources.PathMetadata(
                     newloc, os.path.join(newloc, 'EGG-INFO')
@@ -1853,7 +1852,6 @@ class Recipe(common.MinitageCommonRecipe):
                 '%s-post-setup-hook' % (d.project_name.lower()),
                 newloc
             )
-
             self._call_hook(
                 '%s-post-setup-hook' % (d.project_name),
                 newloc
@@ -1862,7 +1860,7 @@ class Recipe(common.MinitageCommonRecipe):
             self.eggs_caches += [dest]
         rdist = None
         if result:
-            renv = self.make_env([dest])
+            self.make_env([dest])
             rdist = result[0]
         if (not rdist):
             self.scan()
@@ -1907,16 +1905,16 @@ class Recipe(common.MinitageCommonRecipe):
             args = ('-c', ez_main_cmd, ez_args, prefix)
 
         if self.zip_safe:
-            args += ('-Z', )
+            args += ('-Z',)
         else:
-            args += ('-z', )
+            args += ('-z',)
         if self.logger.getEffectiveLevel() <= logging.DEBUG:
-            args += ('-v', )
+            args += ('-v',)
         else:
-            args += ('-q', )
+            args += ('-q',)
 
         if self.offline:
-            args+= ('-H None', )
+            args += ('-H None',)
 
         for dir in caches + self.eggs_caches:
             args += ('-f %s' % os.path.normpath(dir),)
@@ -1935,29 +1933,30 @@ class Recipe(common.MinitageCommonRecipe):
             if os.path.isdir('setuptools'):
                 os.chdir('/')
 
-            self.logger.debug('Running easy_install: \n%s "%s"\n',
-                             self.executable,
-                             '" "'.join(largs))
+            self.logger.debug(
+                'Running easy_install: \n%s "%s"\n',
+                self.executable,
+                '" "'.join(largs))
 
             try:
-                sys.stdout.flush() # We want any pending output first
-                lenv =  dict(os.environ)
+                sys.stdout.flush()  # We want any pending output first
+                lenv = dict(os.environ)
                 if sys.platform.startswith('win'):
                     lenv['SystemRoot'] = os.environ.get('SystemRoot', 'c:\\windows\\')
-                exit_code = subprocess.Popen([self.executable]+list(largs), env = lenv).wait()
+                exit_code = subprocess.Popen(
+                    [self.executable] + list(largs), env=lenv).wait()
                 if exit_code > 0:
                     raise core.MinimergeError('easy install '
                                               'failed !')
             except Exception, e:
                 raise EasyInstallError(
                     'PythonPackage via easy_install '
-                    'Install failed !\n%s' % e,
-                    **{'specs': specs,
-                       'dist': dist,
-                       'working_set': working_set,
-                       'prefix': prefix,
-                      }
-                )
+                    'Install failed !\n%s' % e, **{
+                        'specs': specs,
+                        'dist': dist,
+                        'working_set': working_set,
+                        'prefix': prefix,
+                    })
 
         os.chdir(cwd)
 
@@ -1968,11 +1967,12 @@ class Recipe(common.MinitageCommonRecipe):
             '%s == %s' % (avail.project_name, avail.version)
         )
 
-        self.logger.debug('Trying to get '
-                                 'distribution for \'%s\'' % (
-                                     avail.project_name
-                                 )
-                                )
+        self.logger.debug(
+            'Trying to get '
+            'distribution for \'%s\'' % (
+                avail.project_name
+            )
+        )
 
         # We may overwrite distributions, so clear importer
         # cache.
@@ -2003,7 +2003,7 @@ class Recipe(common.MinitageCommonRecipe):
 
         return dist
 
-    def _get_dist_patches(self, name, aversion = None, options=None):
+    def _get_dist_patches(self, name, aversion=None, options=None):
         """Get the patches for a distribution.
         returns a tuple
         patched_version_str, patch_cmd, patch_options, patches_list
@@ -2030,38 +2030,22 @@ class Recipe(common.MinitageCommonRecipe):
                 '%s-patch-options' % name, '-Np0'
             ).split()
         )
-        patches = options.get(
-            '%s-patches' % name,
-            '').split()
+        patches = options.get('%s-patches' % name, '').split()
         # conditionnaly add OS specifics patches.
-        patches.extend(
-            splitstrip(
-                options.get(
-                    '%s-%s-patches' % (name,
-                                       self.uname.lower()),
-                    ''
-                )
-            )
-        )
+        patches.extend(splitstrip(
+            options.get(
+                '%s-%s-patches' % (name,
+                                   self.uname.lower()),
+                '')))
         # specific version
-        patches.extend(
-            splitstrip(
-                options.get(
-                    '%s-%s-patches' % (name, version),
-                    ''
-                )
-            )
-        )
-        patches.extend(
-            splitstrip(
-                options.get(
-                    '%s--%s-%s-patches' % (name, version,
-                                       self.uname.lower()),
-                    ''
-                )
-            )
-        )
-
+        patches.extend(splitstrip(
+            options.get(
+                '%s-%s-patches' % (name, version),
+                '')))
+        patches.extend(splitstrip(options.get(
+            '%s--%s-%s-patches' % (name, version,
+                                   self.uname.lower()),
+            '')))
         additionnal = ''
         if len(patches):
             # this will make this distribution, the newer one!for this release
@@ -2080,8 +2064,8 @@ class Recipe(common.MinitageCommonRecipe):
                     patch_name = patch_name.replace(s, separator)
                 forged_name = ''
                 for part in patch_name.split(separator):
-                    fname=part
-                    if len(part)>1:
+                    fname = part
+                    if len(part) > 1:
                         fname = '%s%s' % (part[0].upper(), part[1:])
                     forged_name += fname
                 additionnal = '%s-%s' % (additionnal, forged_name)
@@ -2108,13 +2092,13 @@ class Recipe(common.MinitageCommonRecipe):
                 common. MinitageCommonRecipe._patch(
                     self,
                     location,
-                    patch_cmd = patch_cmd,
-                    patch_options = patch_options,
-                    patches = patches,
-                    download_dir = os.path.join(self.download_cache,
-                                                'patches',
-                                                dist.project_name,
-                                                dist.version)
+                    patch_cmd=patch_cmd,
+                    patch_options=patch_options,
+                    patches=patches,
+                    download_dir=os.path.join(self.download_cache,
+                                              'patches',
+                                              dist.project_name,
+                                              dist.version)
                 )
                 dist = dist.clone(**{'version': version})
             except Exception, e:
@@ -2138,22 +2122,17 @@ class Recipe(common.MinitageCommonRecipe):
         """ Wrapper to get trhe current driver letter on windows."""
         if self.uname.startswith('win'):
             if not ':' in dist.location and dist.location.startswith('\\'):
-                dist.location = os.path.join(
-                        os.getcwd()[:2],
-                        dist.location
-                )
+                dist.location = os.path.join(os.getcwd()[:2], dist.location)
 
             if letter_re.match(dist.location):
                 dist.location = os.path.normpath(dist.location)
 
         return dist.location
 
-
     def append(self, requirement, dist, dists):
         """Goal is to centralize dists insertion thus to be monkey pached in extensions
         """
         dists.append(dist)
         return dists
-
 
 # vim:set et sts=4 ts=4 tw=80:
