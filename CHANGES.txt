@@ -3,8 +3,8 @@ CHANGELOG
 =======================
 
 
-1.98 (unreleased)
-------------------
+1.98 (2013-03-31)
+-----------------
 
 - QA release (pep8, coverage, new test layer & contineous integration)
 
