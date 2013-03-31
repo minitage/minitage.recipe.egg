@@ -6,7 +6,7 @@ CHANGELOG
 1.98 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- QA release (pep8, coverage, new test layer & contineous integration)
 
 
 1.97 (2013-03-29)
