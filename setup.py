@@ -67,6 +67,8 @@ setup(
         'iniparse',
     ],
     extras_require={'test': [
+        'minitage.core[test]',
+        'minitage.recipe.common[test]',
         'plone.testing', 'mocker']},
     #tests_require = ['zope.testing'],
     #test_suite = '%s.tests.test_suite' % name,

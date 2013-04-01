@@ -1,6 +1,3 @@
-"""
-Generic Test case
-"""
 __docformat__ = 'restructuredtext'
 
 import unittest2 as unittest
@@ -9,7 +6,7 @@ import logging
 import doctest
 import os
 
-from minitage.recipe.egg.testing import MINITAGE_RECIPE_EGG_FUNCTIONAL_TESTING as layer
+from minitage.recipe.egg.testing import LAYER as layer
 from plone.testing import layered
 
 J = os.path.join
