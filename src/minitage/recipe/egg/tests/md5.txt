@@ -19,6 +19,7 @@ we ll use it to check the already present distribution files in the cache.::
     ... versions = versions
     ... eggs-directory =${buildout:directory}/eggs
     ... download-cache=%(dl)s
+    ... download-directory=%(dl)s
     ... parts = part
     ... index=%(index)s
     ... [part]
@@ -45,6 +46,7 @@ Trying to reinstall & see that the md5sum fragment has been checked up::
     ... [buildout]
     ... eggs-directory =${buildout:directory}/eggs
     ... download-cache=%(dl)s
+    ... download-directory=%(dl)s
     ... parts = part
     ... find-links=%(index)s/foo-1.0.tar.gz#md5sum=1
     ... index=%(index2)s
