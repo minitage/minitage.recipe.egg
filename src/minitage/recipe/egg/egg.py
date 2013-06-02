@@ -825,6 +825,7 @@ class Recipe(common.MinitageCommonRecipe):
                     msg = 'If you want to rebuild, please do \'rm -rf %s\''
                     self.logger.debug(msg % self.get_dist_location(sdist))
                     sdist.activate()
+                    installed.append(sdist)
                     # for buildout to use it !
                     working_set.add(sdist)
                     requirements.append(sdist.as_requirement())
@@ -844,6 +845,7 @@ class Recipe(common.MinitageCommonRecipe):
                     for r in requirements:
                         self.already_installed_dependencies[r.project_name.lower()] = r
                     installed_dist = self._install_distribution(dist, dest, working_set)
+                    installed.append(installed_dist)
                     installed_dist.activate()
                     # for buildout to use it !
                     working_set.add(installed_dist)
@@ -853,7 +855,6 @@ class Recipe(common.MinitageCommonRecipe):
                     self.add_dist(installed_dist)
                     # be sure to have the really installed dist requiremen'ts bits
                     self.already_installed_dependencies[installed_dist.project_name.lower()] = installed_dist.as_requirement()
-                installed.append(sdist)
         return requirements, working_set
 
     def scan(self, scanpaths=None):
