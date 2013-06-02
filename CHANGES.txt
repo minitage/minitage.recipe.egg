@@ -3,7 +3,7 @@ CHANGELOG
 =======================
 
 
-1.101 (unreleased)
+1.101 (2013-06-02)
 ------------------
 
 - fix race condition in install from urls
