@@ -776,6 +776,7 @@ class Recipe(common.MinitageCommonRecipe):
 
             # sort duplicates
             toinstall = []
+            installed = []
             for dist in dists:
                 if not self.get_dist_location(dist) in [self.get_dist_location(d)
                                                         for d in toinstall]:
@@ -818,7 +819,9 @@ class Recipe(common.MinitageCommonRecipe):
                             pass
                     else:
                         raise
-                if sdist and  (sdist.version==dist.version):
+                if sdist and (
+                    not sdist in installed # breaks infinite look !
+                    and (sdist.version==dist.version)):
                     msg = 'If you want to rebuild, please do \'rm -rf %s\''
                     self.logger.debug(msg % self.get_dist_location(sdist))
                     sdist.activate()
@@ -850,6 +853,7 @@ class Recipe(common.MinitageCommonRecipe):
                     self.add_dist(installed_dist)
                     # be sure to have the really installed dist requiremen'ts bits
                     self.already_installed_dependencies[installed_dist.project_name.lower()] = installed_dist.as_requirement()
+                installed.append(sdist)
         return requirements, working_set
 
     def scan(self, scanpaths=None):

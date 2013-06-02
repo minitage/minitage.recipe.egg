@@ -6,7 +6,7 @@ CHANGELOG
 1.101 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- fix race condition in install from urls
 
 
 1.100 (2013-06-02)
