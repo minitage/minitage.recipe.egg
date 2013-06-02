@@ -3,7 +3,7 @@ CHANGELOG
 =======================
 
 
-1.104 (unreleased)
+1.104 (2013-06-02)
 ------------------
 
 - rebuild force mode for static distributions
