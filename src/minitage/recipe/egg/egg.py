@@ -818,7 +818,7 @@ class Recipe(common.MinitageCommonRecipe):
                             pass
                     else:
                         raise
-                if sdist:
+                if sdist and  (sdist.version==dist.version):
                     msg = 'If you want to rebuild, please do \'rm -rf %s\''
                     self.logger.debug(msg % self.get_dist_location(sdist))
                     sdist.activate()

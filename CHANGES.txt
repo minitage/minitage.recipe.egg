@@ -6,7 +6,7 @@ CHANGELOG
 1.100 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- fix install from urls
 
 
 1.99 (2013-04-02)
