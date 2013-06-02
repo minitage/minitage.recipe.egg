@@ -6,7 +6,7 @@ CHANGELOG
 1.104 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- rebuild force mode for static distributions
 
 
 1.103 (2013-06-02)

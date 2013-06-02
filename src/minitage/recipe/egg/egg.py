@@ -785,7 +785,7 @@ class Recipe(common.MinitageCommonRecipe):
 
             for dist in toinstall:
                 self._pin_version(dist.project_name.lower(), dist.version)
-                self.versions[dist.project_name.lower()] = dist.version 
+                self.versions[dist.project_name.lower()] = dist.version
                 requirement = None
                 if dist.version:
                     requirement = pkg_resources.Requirement.parse(
@@ -828,6 +828,14 @@ class Recipe(common.MinitageCommonRecipe):
                         already_installed = True
                 if (dist.project_name, dist.version) in installed:
                     already_installed = True
+                if already_installed:
+                    for a in self.options:
+                        for test in [
+                            '%s-%s-force-rebuild' %  (dist.project_name.lower(), dist.version),
+                            '%s-force-rebuild' %  (dist.project_name.lower()),
+                        ]:
+                            if a.lower() == test:
+                                already_installed = False
                 if already_installed:
                     installed.append((dist.project_name, dist.version))
                     if sdist:

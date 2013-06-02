@@ -47,6 +47,12 @@ Please look for options at : http://pypi.python.org/pypi/minitage.recipe.common#
         Plone
         lxml
 
+* EGGNAME-force-rebuild / EGGNAME-VERSION-force-rebuild:
+  in static distributions mode, force to rebuild the egg::
+
+    urls=http://pil.tar.gz
+    PIL-force-rebuild=true
+
 * EGGNAME-patch-options
     patch binary to use for this egg
 * EGGNAME-patch-binary
