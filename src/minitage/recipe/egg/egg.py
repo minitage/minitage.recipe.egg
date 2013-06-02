@@ -696,6 +696,7 @@ class Recipe(common.MinitageCommonRecipe):
         if not urls:
             urls = self.urls
         dists = []
+        installed = []
         for i, url in enumerate(urls):
             fname = self._download(url=url, cache=True)
             bfname = os.path.basename(fname)
@@ -776,13 +777,15 @@ class Recipe(common.MinitageCommonRecipe):
 
             # sort duplicates
             toinstall = []
-            installed = []
-            for dist in dists:
-                if not self.get_dist_location(dist) in [self.get_dist_location(d)
+            for pdist in dists:
+                if not self.get_dist_location(pdist) in [self.get_dist_location(d)
                                                         for d in toinstall]:
-                    toinstall.append(dist)
+                    if (pdist.project_name, pdist.version) not in installed:
+                        toinstall.append(dist)
 
             for dist in toinstall:
+                self._pin_version(dist.project_name.lower(), dist.version)
+                self.versions[dist.project_name.lower()] = dist.version 
                 requirement = None
                 if dist.version:
                     requirement = pkg_resources.Requirement.parse(
@@ -819,39 +822,44 @@ class Recipe(common.MinitageCommonRecipe):
                             pass
                     else:
                         raise
-                if sdist and (
-                    not sdist in installed # breaks infinite look !
-                    and (sdist.version==dist.version)):
-                    msg = 'If you want to rebuild, please do \'rm -rf %s\''
-                    self.logger.debug(msg % self.get_dist_location(sdist))
-                    sdist.activate()
-                    installed.append(sdist)
-                    # for buildout to use it !
-                    working_set.add(sdist)
-                    requirements.append(sdist.as_requirement())
-                    self._pin_version(sdist.project_name, sdist.version)
-                    self.versions[sdist.project_name] = sdist.version
-                    self.add_dist(sdist)
-                    self.logger.info(
-                        'Activated %s %s (%s).' % (
-                            dist.project_name,
-                            dist.version,
-                            self.get_dist_location(sdist)
+                already_installed = False
+                if sdist:
+                    if sdist.version==dist.version:
+                        already_installed = True
+                if (dist.project_name, dist.version) in installed:
+                    already_installed = True
+                if already_installed:
+                    installed.append((dist.project_name, dist.version))
+                    if sdist:
+                        msg = 'If you want to rebuild, please do \'rm -rf %s\''
+                        self.logger.debug(msg % self.get_dist_location(sdist))
+                        sdist.activate()
+                        # for buildout to use it !
+                        working_set.add(sdist)
+                        requirements.append(sdist.as_requirement())
+                        self._pin_version(sdist.project_name.lower(), sdist.version)
+                        self.versions[sdist.project_name.lower()] = sdist.version
+                        self.add_dist(sdist)
+                        self.logger.info(
+                            'Activated %s %s (%s).' % (
+                                dist.project_name,
+                                dist.version,
+                                self.get_dist_location(sdist)
+                            )
                         )
-                    )
                 else:
                     if not self.already_installed_dependencies:
                         self.already_installed_dependencies = {}
                     for r in requirements:
                         self.already_installed_dependencies[r.project_name.lower()] = r
                     installed_dist = self._install_distribution(dist, dest, working_set)
-                    installed.append(installed_dist)
+                    installed.append((installed_dist.project_name, installed_dist.version))
                     installed_dist.activate()
                     # for buildout to use it !
                     working_set.add(installed_dist)
                     requirements.append(installed_dist.as_requirement())
-                    self._pin_version(installed_dist.project_name, installed_dist.version)
-                    self.versions[installed_dist.project_name] = installed_dist.version
+                    self._pin_version(installed_dist.project_name.lower(), installed_dist.version)
+                    self.versions[installed_dist.project_name.lower()] = installed_dist.version
                     self.add_dist(installed_dist)
                     # be sure to have the really installed dist requiremen'ts bits
                     self.already_installed_dependencies[installed_dist.project_name.lower()] = installed_dist.as_requirement()
