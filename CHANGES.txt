@@ -6,7 +6,7 @@ CHANGELOG
 1.102 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- again, fix
 
 
 1.101 (2013-06-02)
