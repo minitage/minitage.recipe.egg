@@ -860,10 +860,12 @@ class Recipe(common.MinitageCommonRecipe):
                         if to_activate:
                             sdist.activate()
                             working_set.add(sdist)
-                            self.add_dist(sdist)
                         requirements.append(sdist.as_requirement())
                         self._pin_version(sdist.project_name.lower(), sdist.version)
                         self.versions[sdist.project_name.lower()] = sdist.version
+                        # for buildout to use it !
+                        if to_activate:
+                            self.add_dist(sdist)
                         self.logger.info(
                             'Activated %s %s (%s).' % (
                                 dist.project_name,
@@ -882,11 +884,12 @@ class Recipe(common.MinitageCommonRecipe):
                     if to_activate:
                         installed_dist.activate()
                         working_set.add(installed_dist)
-                        self.add_dist(installed_dist)
                     requirements.append(installed_dist.as_requirement())
                     self._pin_version(installed_dist.project_name.lower(), installed_dist.version)
                     self.versions[installed_dist.project_name.lower()] = installed_dist.version
                     # be sure to have the really installed dist requiremen'ts bits
+                    if to_activate:
+                        self.add_dist(installed_dist)
                     self.already_installed_dependencies[installed_dist.project_name.lower()] = installed_dist.as_requirement()
         return requirements, working_set
 
