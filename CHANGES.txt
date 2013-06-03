@@ -6,7 +6,7 @@ CHANGELOG
 1.105 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- no activate mode
 
 
 1.104 (2013-06-02)

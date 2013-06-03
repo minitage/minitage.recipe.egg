@@ -218,6 +218,7 @@ def dependency_resolver_decorator(f):
             for i in dreqs:
                 dist = self.dependency_tree[selector][i]
                 print "    * %s %s (%s)" % (dist.project_name, dist.version, self.get_dist_location(dist))
+            self.logger.debug(traceback.format_exc())
             print
             print
             raise e
@@ -798,6 +799,14 @@ class Recipe(common.MinitageCommonRecipe):
                 # force env rescanning if egg was not there at init.
                 self.scan([dest])
                 sdist, savail = None, None
+                to_activate = True
+                for a in self.options:
+                    for test in [
+                        '%s-%s-no-activate' %  (dist.project_name.lower(), dist.version),
+                        '%s-no-activate' %  (dist.project_name.lower()),
+                    ]:
+                        if a.lower() == test:
+                            to_activate = False
                 try:
                     sdist, savail, _ = self._satisfied(requirement, working_set)
                 except zc.buildout.easy_install.MissingDistribution:
@@ -822,6 +831,12 @@ class Recipe(common.MinitageCommonRecipe):
                             pass
                     else:
                         raise
+                except pkg_resources.VersionConflict, e:
+                    # if not activated, no pb with conflicting requirement
+                    if not to_activate:
+                        pass
+                    else:
+                        raise
                 already_installed = False
                 if sdist:
                     if sdist.version==dist.version:
@@ -841,13 +856,14 @@ class Recipe(common.MinitageCommonRecipe):
                     if sdist:
                         msg = 'If you want to rebuild, please do \'rm -rf %s\''
                         self.logger.debug(msg % self.get_dist_location(sdist))
-                        sdist.activate()
                         # for buildout to use it !
-                        working_set.add(sdist)
+                        if to_activate:
+                            sdist.activate()
+                            working_set.add(sdist)
+                            self.add_dist(sdist)
                         requirements.append(sdist.as_requirement())
                         self._pin_version(sdist.project_name.lower(), sdist.version)
                         self.versions[sdist.project_name.lower()] = sdist.version
-                        self.add_dist(sdist)
                         self.logger.info(
                             'Activated %s %s (%s).' % (
                                 dist.project_name,
@@ -862,13 +878,14 @@ class Recipe(common.MinitageCommonRecipe):
                         self.already_installed_dependencies[r.project_name.lower()] = r
                     installed_dist = self._install_distribution(dist, dest, working_set)
                     installed.append((installed_dist.project_name, installed_dist.version))
-                    installed_dist.activate()
                     # for buildout to use it !
-                    working_set.add(installed_dist)
+                    if to_activate:
+                        installed_dist.activate()
+                        working_set.add(installed_dist)
+                        self.add_dist(installed_dist)
                     requirements.append(installed_dist.as_requirement())
                     self._pin_version(installed_dist.project_name.lower(), installed_dist.version)
                     self.versions[installed_dist.project_name.lower()] = installed_dist.version
-                    self.add_dist(installed_dist)
                     # be sure to have the really installed dist requiremen'ts bits
                     self.already_installed_dependencies[installed_dist.project_name.lower()] = installed_dist.as_requirement()
         return requirements, working_set

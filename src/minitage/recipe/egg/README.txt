@@ -47,8 +47,10 @@ Please look for options at : http://pypi.python.org/pypi/minitage.recipe.common#
         Plone
         lxml
 
+* EGGNAME-no-activate / EGGNAME-VERSION-no-activate:
+  in static distribution mode, force not to activate the distribution (just build)
 * EGGNAME-force-rebuild / EGGNAME-VERSION-force-rebuild:
-  in static distributions mode, force to rebuild the egg::
+  in static distribution mode, force to rebuild the egg::
 
     urls=http://pil.tar.gz
     PIL-force-rebuild=true
