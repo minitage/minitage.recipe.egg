@@ -42,6 +42,11 @@ import py_compile
 import traceback
 import logging
 
+try:
+    from collections import OrderedDict
+except:
+    from ordereddict import OrderedDict
+
 import setuptools
 from ConfigParser import NoOptionError
 import iniparse as ConfigParser
@@ -1239,7 +1244,7 @@ class Recipe(common.MinitageCommonRecipe):
             self.logger.error('Cant pin the specific versions for %s\n%s' % (requirement, e))
 
     def _constrain(self, requirements, fromdist=None):
-        constrained_requirements = {}
+        constrained_requirements = OrderedDict()
         for requirement in requirements:
             if not isinstance(requirement, pkg_resources.Requirement):
                 requirement = pkg_resources.Requirement.parse(requirement)
