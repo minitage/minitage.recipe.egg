@@ -61,6 +61,7 @@ from minitage.core.common import splitstrip, remove_path, letter_re
 
 PATCH_MARKER = 'ZMinitagePatched'
 BOOTSTRAP = "http://svn.zope.org/*checkout*/zc.buildout/trunk/bootstrap/bootstrap.py"
+SETUPTOOLS_VERSION = "0.7.2"
 
 BOOTSTRAP_DISTRIBUTE_SCRIPT = """
 import urllib2
@@ -68,6 +69,13 @@ ez = {}
 exec urllib2.urlopen('http://python-distribute.org/distribute_setup.py'
                 ).read() in ez
 ez['use_setuptools'](to_dir='%(destination)s', download_delay=0, no_fake=True)
+"""
+BOOTSTRAP_ST_SCRIPT = """
+import urllib2
+ez = {}
+exec urllib2.urlopen('https://bitbucket.org/pypa/setuptools/raw/tip/ez_setup.py'
+                ).read() in ez
+ez['use_setuptools']("%(sv)s", to_dir='%(destination)s', download_delay=0)
 """
 
 if sys.platform.startswith('win'):
@@ -536,7 +544,23 @@ class Recipe(common.MinitageCommonRecipe):
             if not self.HAS_DISTRIBUTE:
                 self.has_setuptools()
             if not self.HAS_DISTRIBUTE and not self.HAS_SETUPTOOLS:
-                self.install_distribute()
+                self.install_setuptools()
+
+    def install_setuptools(self):
+        self.logger.debug('Installing setuptools for the targeted python')
+        tfile = tempfile.mkstemp()[1]
+        ppath = os.environ.get('PYTHONPATH', '')
+        os.environ['PYTHONPATH'] = ''
+        open(tfile, 'w').write(
+            BOOTSTRAP_ST_SCRIPT % {
+                'sv': SETUPTOOLS_VERSION ,
+                'destination': self.eggs_directory}
+        )
+        ret = subprocess.Popen([self.executable, tfile]).wait()
+        os.environ['PYTHONPATH'] = ppath
+        if not ret == 0:
+            raise Exception('Cannot install seTuptools!')
+        self.has_setuptools()
 
     def install_distribute(self):
         self.logger.debug('Installing distribute for the targeted python')
@@ -562,9 +586,12 @@ class Recipe(common.MinitageCommonRecipe):
                     pkg_resources.Requirement.parse('distribute')
                 )
                 if dist:
-                    self.HAS_DISTRIBUTE = True
-                    self.extra_paths.append(dist.location)
-                    self.logger.debug('Using distribute!')
+                    if dist.version.startswith('0.6'):
+                        self.HAS_DISTRIBUTE = True
+                        self.extra_paths.append(dist.location)
+                        self.logger.debug('Using distribute!')
+                    else:
+                        self.HAS_DISTRIBUTE = False
             except:
                 self.logger.warning('You are using the old setuptools, maybe you '
                                     'should upgrade to distribute.')

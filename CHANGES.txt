@@ -6,7 +6,7 @@ CHANGELOG
 1.105 (unreleased)
 ------------------
 
-- no activate mode
+- handle last setuptools
 
 
 1.104 (2013-06-02)
