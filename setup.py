@@ -62,6 +62,7 @@ setup(
     zip_safe=False,
     install_requires = [
         'zc.buildout',
+        'setuptools',
         'minitage.core',
         'minitage.recipe.common',
         'iniparse',
