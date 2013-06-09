@@ -65,6 +65,7 @@ setup(
         'minitage.core',
         'minitage.recipe.common',
         'iniparse',
+        'ordereddict',
     ],
     extras_require={'test': [
         'minitage.core[test]',
