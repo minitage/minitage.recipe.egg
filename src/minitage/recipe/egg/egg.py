@@ -582,9 +582,9 @@ class Recipe(common.MinitageCommonRecipe):
         if not self.HAS_DISTRIBUTE:
             try:
                 self.scan()
-                dist, avail = self.inst._satisfied(
-                    pkg_resources.Requirement.parse('distribute')
-                )
+                dreq = self._constrain_requirement(
+                    pkg_resources.Requirement.parse('distribute'))
+                dist, avail = self.inst._satisfied(dreq)
                 if dist:
                     if dist.version.startswith('0.6'):
                         self.HAS_DISTRIBUTE = True
