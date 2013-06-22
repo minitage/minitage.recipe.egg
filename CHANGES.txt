@@ -3,7 +3,7 @@ CHANGELOG
 =======================
 
 
-1.105 (unreleased)
+1.105 (2013-06-22)
 ------------------
 
 - handle last setuptools
