@@ -6,7 +6,7 @@ CHANGELOG
 1.107 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- fix previous patch
 
 
 1.106 (2013-06-26)

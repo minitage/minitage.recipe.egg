@@ -2043,8 +2043,8 @@ class Recipe(common.MinitageCommonRecipe):
                             raise
                     except:
                         raise core.MinimergeError('easy install failed !')
-                    finally:
-                        self._sanitizeenv(working_set)
+                    #finally:
+                    #    self._sanitizeenv(working_set)
             except Exception, e:
                 raise EasyInstallError(
                     'PythonPackage via easy_install '
