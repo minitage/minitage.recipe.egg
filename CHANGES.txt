@@ -6,7 +6,7 @@ CHANGELOG
 1.106 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- try to install at first with a clean pythonpath (only setuptools)
 
 
 1.105 (2013-06-22)

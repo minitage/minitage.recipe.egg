@@ -2013,14 +2013,38 @@ class Recipe(common.MinitageCommonRecipe):
 
             try:
                 sys.stdout.flush()  # We want any pending output first
-                lenv = dict(os.environ)
-                if sys.platform.startswith('win'):
-                    lenv['SystemRoot'] = os.environ.get('SystemRoot', 'c:\\windows\\')
-                exit_code = subprocess.Popen(
-                    [self.executable] + list(largs), env=lenv).wait()
+                fullenv = dict(os.environ)
+                lightenv = dict(os.environ)
+                st_req = self._constrain_requirement(
+                    pkg_resources.Requirement.parse('setuptools')
+                )
+                try:
+                    setuptools_loc = working_set.find(st_req).location
+                except:
+                    try:
+                        setuptools_loc = pkg_resources.working_set.find(st_req).location
+                    except:
+                        setuptools_loc = None
+                # if we found easyly a setuptool prefix, try to install with only setuptools in pypath
+                if not setuptools_loc:
+                    exit_code = 1
+                else:
+                    lightenv['PYTHONPATH'] = setuptools_loc
+                    #lenv['PYTHONPATH'] = ''
+                    if sys.platform.startswith('win'):
+                        lightenv['SystemRoot'] = fullenv['SystemRoot'] = os.environ.get('SystemRoot', 'c:\\windows\\')
+                    exit_code = subprocess.Popen( [self.executable] + list(largs), env=lightenv).wait()
                 if exit_code > 0:
-                    raise core.MinimergeError('easy install '
-                                              'failed !')
+                    # if it fails try to install with full pythonpath instead
+                    try:
+                        sys.stdout.flush()  # We want any pending output first
+                        exit_code = subprocess.Popen([self.executable] + list(largs), env=fullenv).wait()
+                        if exit_code > 0:
+                            raise
+                    except:
+                        raise core.MinimergeError('easy install failed !')
+                    finally:
+                        self._sanitizeenv(working_set)
             except Exception, e:
                 raise EasyInstallError(
                     'PythonPackage via easy_install '
