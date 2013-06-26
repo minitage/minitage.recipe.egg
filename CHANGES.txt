@@ -3,7 +3,7 @@ CHANGELOG
 =======================
 
 
-1.107 (unreleased)
+1.107 (2013-06-26)
 ------------------
 
 - fix previous patch
