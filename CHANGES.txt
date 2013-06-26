@@ -3,7 +3,7 @@ CHANGELOG
 =======================
 
 
-1.106 (unreleased)
+1.106 (2013-06-26)
 ------------------
 
 - try to install at first with a clean pythonpath (only setuptools)
